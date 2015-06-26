@@ -152,7 +152,7 @@ const bool SM_ON						= false;							// Turn Space Modeling on (T) or off (F)
 const bool AVG_FILTER_HULL				= true;								// Apply averaging filter to hull (T) or not (F)
 const bool COUNT_0_WEPLS				= false;							// Count the number of histories with WEPL = 0 (T) or not (F)
 const bool REALLOCATE					= false;
-const bool MLP_FILE_EXISTS				= false;
+const bool MLP_FILE_EXISTS				= true;
 const bool MLP_ENDPOINTS_FILE_EXISTS	= true;
 bool MODIFY_MLP = true;
 /***************************************************************************************************************************************************************************/
@@ -178,7 +178,7 @@ const char OUTPUT_DIRECTORY[]  = "//home//karbasi//Public//";
 //const char INPUT_FOLDER[]	   = "beam-Sep2014\\bin-CIRSFordSup";
 //const char OUTPUT_FOLDER[]	   = "beam-Sep2014\\bin-CIRSFordSup";
 const char INPUT_FOLDER[]	   = "input_CTP404_4M";
-const char OUTPUT_FOLDER[]         = "cuda_test_blake";
+const char OUTPUT_FOLDER[]         = "cuda_test";
 //const char INPUT_FOLDER[]	   = "output_HeadPhantom";
 //const char OUTPUT_FOLDER[]	   = "output_HeadPhantom";
 //const char INPUT_FOLDER[]	   = "PedHead-july";
@@ -447,7 +447,7 @@ double* norm_Ai;
 float LAMBDA = 0.001;// Relaxation parameter to use in image iterative projection reconstruction algorithms	
 #define ITERATIONS				12										// # of iterations through the entire set of histories to perform in iterative image reconstruction
 
-#define BLOCK_SIZE			static_cast<int>(320000)//15000000//3840// # of paths to use for each update: ART = 1, 
+#define BLOCK_SIZE				static_cast<int>(320000)//15000000//3840// # of paths to use for each update: ART = 1, 
 #define BLOCK_SIZE_RECON		static_cast<int>(3200)//3840// # of paths to use for each update: ART = 1, 
 #define DROP_BLOCK_SIZE			static_cast<int>(3200)//3840// # of paths to use for each update: ART = 1, 
 

@@ -93,6 +93,7 @@ INCLUDES      := -I$(CUDA_INC_PATH) \
 EXEC_DIR := bin
 OBJ_DIR  := obj
 SRC_DIR  := src
+LOG_DIR  := log
 
 SRC      := $(SRC_DIR)/pCT_Reconstruction_Data_Segments.cu
 OBJ      := $(patsubst %.cu, $(OBJ_DIR)/%.cu.o, $(notdir $(filter %.cu, $(SRC)))) \
@@ -120,20 +121,26 @@ else
   endif
 endif
 
+LOG_FILE ?= log/cuda_log.txt
+
 # Target rules
 all: $(EXEC)
 
 $(EXEC): makedirectory $(OBJ)
 	$(NVCC) $(OBJ) -o $@
 $(OBJ_DIR)/%.cu.o: $(SRC_DIR)/%.cu
-	$(NVCC) -v $(NVCCFLAGS) $(GENCODE_FLAGS) $(INCLUDES) -o $@ -c $<
+	$(NVCC) -v $(NVCCFLAGS) $(INCLUDES) -o $@ -c $<
+#$(NVCC) -v $(NVCCFLAGS) $(GENCODE_FLAGS) $(INCLUDES) -o $@ -c $<
 $(OBJ_DIR)/%.c.o: $(SRC_DIR)/%.c
 	$(NVCC) -v $(NVCCFLAGS) $(INCLUDES) -o $@ -c $<
 makedirectory:
 	mkdir -p $(EXEC_DIR)
 	mkdir -p $(OBJ_DIR)
+	mkdir -p $(LOG_DIR)
 run: $(EXEC)
 	./$(EXEC)
+cuda_prof_run: $(EXEC)
+	nvprof --log-file $(LOG_FILE) ./$(EXEC)
 clean:
 	rm -rf $(OBJ_DIR) $(EXEC_DIR)
 test:
@@ -144,3 +151,5 @@ test:
 	$(info OSLOWER = $(OSLOWER))
 	$(info OS_ARCH = $(OS_ARCH))
 	$(info OS_SIZE = $(OS_SIZE))
+	$(info NVCCFLAGS = $(NVCCFLAGS))
+	$(info GENCODE_FLAGS = $(GENCODE_FLAGS))
