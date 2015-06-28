@@ -6001,7 +6001,7 @@ __global__ void collect_MLP_endpoints_GPU(bool* intersected_hull, unsigned int* 
 
 	//int proton_id = start_proton_id + threadIdx.x + blockIdx.x * blockDim.x;
 	//int proton_id = start_proton_id + threadIdx.x * ENDPOINTS_PER_THREAD + blockIdx.x * ENDPOINTS_PER_BLOCK;
-	int proton_id = start_proton_id + threadIdx.x * ENDPOINTS_PER_THREAD + blockIdx.x * ENDPOINTS_PER_BLOCK* ENDPOINTS_PER_THREAD;
+		int proton_id = start_proton_id + threadIdx.x * ENDPOINTS_PER_THREAD + blockIdx.x * ENDPOINTS_PER_BLOCK;
 
 	for( int history = 0; history < ENDPOINTS_PER_THREAD; history++)
 	{
@@ -6780,152 +6780,99 @@ void drop_cuts_memory_clean()
 	cudaFree(xy_exit_angle_d);
 	cudaFree(xz_exit_angle_d);
 }
-void image_reconstruction_GPU()
-{
+void image_reconstruction_GPU() 
+{  
+	 
+	  //cudaSetDevice(0);
 	  char iterate_filename[256];
           clock_t begin1, end1, begin2, end2;
 	  float time_spent1, time_spent2;
-	  int i = 0;
+	  int i = 0; 
 	  reconstruction_histories = 0;
-
+	  
 	  sprintf(iterate_filename, "%s%d", "x_", 0 );
-
+		
 		if( WRITE_X_KI ) {
 			//transfer_device_to_host();
-			array_2_disk(iterate_filename, OUTPUT_DIRECTORY, OUTPUT_FOLDER, x_h, COLUMNS, ROWS, SLICES, NUM_VOXELS, true );
+			array_2_disk(iterate_filename, OUTPUT_DIRECTORY, OUTPUT_FOLDER, x_h, COLUMNS, ROWS, SLICES, NUM_VOXELS, true ); 
 		}
-
+	  
 	  printf("%d\n",post_cut_histories);
-
-
-	  //dim3 dimGrid( COLUMNS, ROWS );
-
-	  //post_cut_histories = 50000000;
+	  
 	  first_MLP_voxel_vector.resize( post_cut_histories );
-	  //num_histories = 60000000;
-
-
-	  //dim3 dimBlock(THREADS_PER_BLOCK);
-
-	  //int num_blocks = static_cast<int>( (post_cut_histories - 1 + THREADS_PER_BLOCK )/ THREADS_PER_BLOCK ) ;
-
-	  //int num_blocks = static_cast<int>((BLOCK_SIZE + HISTORIES_PER_BLOCK - 1)/HISTORIES_PER_BLOCK);
-	  //int num_blocks = static_cast<int>((BLOCK_SIZE - 1 + THREADS_PER_BLOCK) / THREADS_PER_BLOCK);
-
-	  //dim3 dimBlock( SLICES );
-	  //dim3 dimGrid( COLUMNS/VOXELS_PER_THREAD, ROWS );
-
+	  
+	  
 	  // Allocate GPU memory for x, hull, x_update, and S
 	  transfer_reconstruction_images();
 
 	  puts("Starting collecting MLP endpoints...");
 	  int remaining_histories = post_cut_histories, start_position = 0, histories_to_process = 0;
-
+	  
+	//cudaFree(intersected_hull_d);
+	//cudaFree(first_MLP_voxel_d);
+	//cudaFree(x_entry_d);
+	//cudaFree(y_entry_d);
+	//cudaFree(z_entry_d);
+	//cudaFree(x_exit_d);
+	//cudaFree(y_exit_d);
+	//cudaFree(z_exit_d);
+	//cudaFree(xy_entry_angle_d);
+	//cudaFree(xz_entry_angle_d);
+	//cudaFree(xy_exit_angle_d);
+	//cudaFree(xz_exit_angle_d);
+	//cudaError_t err2 = cudaGetLastError();
+		//if (err2 != cudaSuccess) 
+			//printf("Error: %s\n", cudaGetErrorString(err2));		
+	  
 	  printf("start remaining histories: %d\n", remaining_histories);
 	  begin1 = clock();
 		while( remaining_histories > 0 )
 		{
 			printf("*******\n");
-
+		  
 			if( remaining_histories > MAX_ENDPOINTS_HISTORIES )
 				histories_to_process = MAX_ENDPOINTS_HISTORIES;
 			else
 				histories_to_process = remaining_histories;
-
+			
 			reconstruction_cuts( start_position, histories_to_process );
-
+			//cudaDeviceSynchronize();
+			
 			remaining_histories -= MAX_ENDPOINTS_HISTORIES;
 			start_position		+= MAX_ENDPOINTS_HISTORIES;
 		}
-
-	  puts("Statistical cuts complete.");
-	  end1 = clock();
-	  time_spent1 = (float)(end1 - begin1) / CLOCKS_PER_SEC;
-	  printf( "time spent on reconstruction_cuts : %lf seconds\n", time_spent1 );
-	  printf("RECON hist %d\n", reconstruction_histories);
-	  /*gpu_memory_allocation( post_cut_histories );
-
-
-	  transfer_host_to_device( post_cut_histories );
-
-
-
-
-	  while( i < post_cut_histories ) {
-
-		collect_MLP_endpoints_GPU<<< num_blocks, THREADS_PER_BLOCK >>>( intersected_hull_d, first_MLP_voxel_d, x_hull_d, x_entry_d, y_entry_d,
-										z_entry_d, xy_entry_angle_d, xz_entry_angle_d, x_exit_d, y_exit_d,
-										z_exit_d, xy_exit_angle_d, xz_exit_angle_d, i, post_cut_histories);
-
-
-		cudaError_t err = cudaGetLastError();
-		if (err != cudaSuccess)
-			printf("Error: %s\n", cudaGetErrorString(err));
-		i+=BLOCK_SIZE;
-
-	  }
-
-
-
-	  transfer_intermediate_results_device_to_host( post_cut_histories );
-
-
-
-	  for( i = 0; i < post_cut_histories; i++ ) {
-
-		if( intersected_hull_h[i] ) {
-
-			first_MLP_voxel_vector[reconstruction_histories] = first_MLP_voxel_vector[i];
-			//printf("%d\n",first_MLP_voxel_vector[i] );
-			bin_num_vector[reconstruction_histories] = bin_num_vector[i];
-			WEPL_vector[reconstruction_histories] = WEPL_vector[i];
-			x_entry_vector[reconstruction_histories] = x_entry_vector[i];
-			y_entry_vector[reconstruction_histories] = y_entry_vector[i];
-			z_entry_vector[reconstruction_histories] = z_entry_vector[i];
-			x_exit_vector[reconstruction_histories] = x_exit_vector[i];
-			y_exit_vector[reconstruction_histories] = y_exit_vector[i];
-			z_exit_vector[reconstruction_histories] = z_exit_vector[i];
-			xy_entry_angle_vector[reconstruction_histories] = xy_entry_angle_vector[i];
-			xz_entry_angle_vector[reconstruction_histories] = xz_entry_angle_vector[i];
-			xy_exit_angle_vector[reconstruction_histories] = xy_exit_angle_vector[i];
-			xz_exit_angle_vector[reconstruction_histories] = xz_exit_angle_vector[i];
-			reconstruction_histories++;
-		}
-	}
-
-	*/
-
+		
+	puts("Statistical cuts complete.");
+	end1 = clock();
+	time_spent1 = (float)(end1 - begin1) / CLOCKS_PER_SEC;
+	printf( "time spent on reconstruction_cuts : %lf seconds\n", time_spent1 );
+	printf("RECON hist %d\n", reconstruction_histories);
+	  
 	first_MLP_voxel_vector.resize( reconstruction_histories );
 	resize_vectors( reconstruction_histories );
-	/*bin_num_vector.resize( reconstruction_histories );
-	WEPL_vector.resize( reconstruction_histories );
-	x_entry_vector.resize( reconstruction_histories );
-	y_entry_vector.resize( reconstruction_histories );
-	z_entry_vector.resize( reconstruction_histories );
-	x_exit_vector.resize( reconstruction_histories );
-	y_exit_vector.resize( reconstruction_histories );
-	z_exit_vector.resize( reconstruction_histories );
-	xy_entry_angle_vector.resize( reconstruction_histories );
-	xz_entry_angle_vector.resize( reconstruction_histories );
-	xy_exit_angle_vector.resize( reconstruction_histories );
-	xz_exit_angle_vector.resize( reconstruction_histories );*/
-
-
-	//int num_blocks = static_cast<int>((BLOCK_SIZE_RECON + HISTORIES_PER_BLOCK - 1)/HISTORIES_PER_BLOCK);
+	
 	int num_blocks = 0;
 	int column_blocks = static_cast<int>(COLUMNS/VOXELS_PER_THREAD);
 	dim3 dimBlock( SLICES );
 	dim3 dimGrid( column_blocks, ROWS );
-	//dim3 dimGrid( COLUMNS, ROWS );
-	//dim3 dimGrid( COLUMNS/VOXELS_PER_THREAD, ROWS );
-
+	
+	
+	//exit(0);
+	
+	generate_trig_tables();
+	generate_scattering_coefficient_table();
+	generate_polynomial_tables();
+	tables_2_GPU();
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////TRANSFER DATA RECON CHUNCK by CHUNCK///////////////////////////////////////////////////////////////////////////////////////////////
+	/*drop_cuts_allocations( BLOCK_SIZE_RECON );
+	
 	init_image_GPU<<< dimGrid, dimBlock >>>(x_update_d, intersection_counts_d);
 	cudaError_t err = cudaGetLastError();
-	if (err != cudaSuccess)
+	if (err != cudaSuccess) 
 		printf("Error: %s\n", cudaGetErrorString(err));
 
 	for(int iteration = 1; iteration <= ITERATIONS ; ++iteration) {
-
+	    
 		float total_time1=0.0, total_time2 = 0.0;
 		i=0;
 		printf("Performing iteration %u of image reconstruction\n", iteration);
@@ -6941,139 +6888,149 @@ void image_reconstruction_GPU()
 			if( remaining_histories > BLOCK_SIZE_RECON )
 				histories_to_process = BLOCK_SIZE_RECON;
 			else
-				histories_to_process = remaining_histories;
-
-			drop_cuts( start_position, histories_to_process );
-
-			num_blocks = static_cast<int>( (histories_to_process - 1 + HISTORIES_PER_BLOCK*HISTORIES_PER_THREAD) / (HISTORIES_PER_BLOCK*HISTORIES_PER_THREAD));
-
-			block_update_GPU<<< num_blocks, HISTORIES_PER_BLOCK >>>( x_d, x_entry_d, y_entry_d, z_entry_d, xy_entry_angle_d, xz_entry_angle_d, x_exit_d, y_exit_d, z_exit_d,  xy_exit_angle_d,
-					 xz_exit_angle_d, WEPL_d, first_MLP_voxel_d, x_update_d, intersection_counts_d, 0, histories_to_process, LAMBDA );
-
+				histories_to_process = remaining_histories;	
+			
+			//drop_cuts( start_position, histories_to_process );
+			drop_cuts_preallocated( start_position, histories_to_process );
+			
+			num_blocks = static_cast<int>( (histories_to_process - 1 + HISTORIES_PER_BLOCK*HISTORIES_PER_THREAD) / (HISTORIES_PER_BLOCK*HISTORIES_PER_THREAD));  
+			
+			//block_update_GPU<<< num_blocks, HISTORIES_PER_BLOCK >>>( x_d, x_entry_d, y_entry_d, z_entry_d, xy_entry_angle_d, xz_entry_angle_d, x_exit_d, y_exit_d, z_exit_d,  xy_exit_angle_d, 
+					 //xz_exit_angle_d, WEPL_d, first_MLP_voxel_d, x_update_d, intersection_counts_d, 0, histories_to_process, LAMBDA );	
+					
+			block_update_GPU_tabulated<<< num_blocks, HISTORIES_PER_BLOCK >>>( x_d, x_entry_d, y_entry_d, z_entry_d, xy_entry_angle_d, xz_entry_angle_d, x_exit_d, y_exit_d, z_exit_d,  xy_exit_angle_d, 
+					 xz_exit_angle_d, WEPL_d, first_MLP_voxel_d, x_update_d, intersection_counts_d, 0, histories_to_process, LAMBDA,
+					 sin_table_d, cos_table_d, scattering_table_d, poly_1_2_d, poly_2_3_d, poly_3_4_d, poly_2_6_d, poly_3_12_d);
+			
 			err = cudaGetLastError();
-			if (err != cudaSuccess)
+			if (err != cudaSuccess) 
 				printf("Error: %s\n", cudaGetErrorString(err));
 
 			//cudaEventRecord(start, 0);
 			image_update_GPU<<< dimGrid, dimBlock >>>( x_d, x_update_d, intersection_counts_d );
-
-			drop_cuts_memory_clean();
+			
+			//drop_cuts_memory_clean();
 			//cudaEventRecord(stop, 0);
 			//cudaEventSynchronize(stop);
 			//cudaEventElapsedTime(&time, start, stop);
-
+			
 			//time_spent2 = (float)(end2 - begin2) / CLOCKS_PER_SEC;
 			//total_time2+=time;
 			remaining_histories -= BLOCK_SIZE_RECON;
 			start_position		+= BLOCK_SIZE_RECON;
 		}
-
+		
 		end1 = clock();
 		time_spent1 = (float)(end1 - begin1) / CLOCKS_PER_SEC;
-
+	  
 		//printf( "time spent on block_update: %lf ,and image_update: %lf milliseconds\n", 0.0f, total_time2 );
 		printf( "time spent on iteration %d : %lf seconds\n", iteration, time_spent1 );
-
+		
 		//sprintf(iterate_filename, "%s%d", "x_", iteration );
 		sprintf(iterate_filename, "%s%d", "x_", iteration );
 		if( WRITE_X_KI ) {
 			transfer_image_device_to_host();
-			array_2_disk(iterate_filename, OUTPUT_DIRECTORY, OUTPUT_FOLDER, x_h, COLUMNS, ROWS, SLICES, NUM_VOXELS, true );
+			array_2_disk(iterate_filename, OUTPUT_DIRECTORY, OUTPUT_FOLDER, x_h, COLUMNS, ROWS, SLICES, NUM_VOXELS, true ); 
 		}
 	}
-
-
-
-
-	//printf("RECON hist %d\n", reconstruction_histories);
-
-	/*transfer_intermediate_results_host_to_device( reconstruction_histories );
-
+	
+	drop_cuts_memory_clean();
+	*/
+	
+	///////////////////////////////////////////////////////////////////////////////////////////////////////END of TRANSFER DATA RECON CHUNCK by CHUNCK//////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////TRANSFER DATA RECON TO MEMORY ALL at ONCE///////////////////////////////////////////////////////////////////////////////////////////////////
+	puts("Transfer data for reconstruction to GPU all at once...");
+	transfer_intermediate_results_host_to_device( reconstruction_histories ); // transfer to memory all at once
+	
 	cudaError_t err = cudaGetLastError();
-		if (err != cudaSuccess)
+		if (err != cudaSuccess) 
 			printf("Error: %s\n", cudaGetErrorString(err));
-
+	  
 	i=0;
-
-
+	 
+	
 	cudaEvent_t start, stop;
 	float time;
 	cudaEventCreate(&start);
 	cudaEventCreate(&stop);
-
-	dim3 dimBlock( SLICES );
-	dim3 dimGrid( COLUMNS, ROWS );
-	//dim3 dimGrid( COLUMNS/VOXELS_PER_THREAD, ROWS );
-
+	
+	
 	init_image_GPU<<< dimGrid, dimBlock >>>(x_update_d, intersection_counts_d);
 	err = cudaGetLastError();
-	if (err != cudaSuccess)
+	if (err != cudaSuccess) 
 		printf("Error: %s\n", cudaGetErrorString(err));
-
-	 //int remaining_histories = BLOCK_SIZE % THREADS_PER_BLOCK;
-
-	 //history_sequence = (ULL*)calloc( reconstruction_histories, sizeof(ULL));
-	 //generate_history_sequence(post_cut_histories, PRIME_OFFSET, history_sequence );
-	int num_blocks = static_cast<int>((BLOCK_SIZE_RECON + HISTORIES_PER_BLOCK - 1)/HISTORIES_PER_BLOCK);
-
+	 
+	
+	
 	//begin = clock();
 	for(int iteration = 1; iteration <= ITERATIONS ; ++iteration) {
-
+	    
 		float total_time1=0.0, total_time2 = 0.0;
 		i=0;
 		printf("Performing iteration %u of image reconstruction\n", iteration);
 		begin1 = clock();
-		while ( i < reconstruction_histories ) {
-
-			//begin1 = clock();
-
-			block_update_GPU<<< num_blocks, HISTORIES_PER_BLOCK >>>(x_d, x_entry_d, y_entry_d, z_entry_d, xy_entry_angle_d, xz_entry_angle_d, x_exit_d, y_exit_d, z_exit_d,  xy_exit_angle_d,
-					 xz_exit_angle_d, WEPL_d, first_MLP_voxel_d, x_update_d, intersection_counts_d, i, reconstruction_histories, LAMBDA);
-
-			//end1 = clock();
-			//time_spent1 = (float)(end1 - begin1) / CLOCKS_PER_SEC;
-			//total_time1+=time_spent1;
-			//printf( "time spent on block_update_GPU: %lf\n", time_spent );
-
+		remaining_histories = reconstruction_histories;
+		start_position = 0;
+		while ( remaining_histories > 0 ) {
+		
+			
+			if( remaining_histories > BLOCK_SIZE_RECON )
+				histories_to_process = BLOCK_SIZE_RECON;
+			else
+				histories_to_process = remaining_histories;	
+			
+			num_blocks = static_cast<int>( (histories_to_process - 1 + HISTORIES_PER_BLOCK*HISTORIES_PER_THREAD) / (HISTORIES_PER_BLOCK*HISTORIES_PER_THREAD));
+			//block_update_GPU<<< num_blocks, HISTORIES_PER_BLOCK >>>(x_d, x_entry_d, y_entry_d, z_entry_d, xy_entry_angle_d, xz_entry_angle_d, x_exit_d, y_exit_d, z_exit_d,  xy_exit_angle_d, 
+			//		 xz_exit_angle_d, WEPL_d, first_MLP_voxel_d, x_update_d, intersection_counts_d, start_position, start_position + histories_to_process, LAMBDA);
+					 
+			block_update_GPU_tabulated<<< num_blocks, HISTORIES_PER_BLOCK >>>( x_d, x_entry_d, y_entry_d, z_entry_d, xy_entry_angle_d, xz_entry_angle_d, x_exit_d, y_exit_d, z_exit_d,  xy_exit_angle_d, 
+					 xz_exit_angle_d, WEPL_d, first_MLP_voxel_d, x_update_d, intersection_counts_d, start_position, start_position + histories_to_process, LAMBDA,
+					 sin_table_d, cos_table_d, scattering_table_d, poly_1_2_d, poly_2_3_d, poly_3_4_d, poly_2_6_d, poly_3_12_d);
+					  
+			
 			err = cudaGetLastError();
-			if (err != cudaSuccess)
+			if (err != cudaSuccess) 
 				printf("Error: %s\n", cudaGetErrorString(err));
-
-
-
+		
+		
+		
 
 			cudaEventRecord(start, 0);
 			image_update_GPU<<< dimGrid, dimBlock >>>(x_d, x_update_d, intersection_counts_d);
 			cudaEventRecord(stop, 0);
 			cudaEventSynchronize(stop);
 			cudaEventElapsedTime(&time, start, stop);
-
-			//time_spent2 = (float)(end2 - begin2) / CLOCKS_PER_SEC;
+			
+			
 			total_time2+=time;
-			//printf( "time spent on image_update_GPU: %lf\n", time_spent );
-
-			i+=num_blocks*HISTORIES_PER_BLOCK*HISTORIES_PER_THREAD;
+			
+		  
+			
+			remaining_histories -= BLOCK_SIZE_RECON;
+			start_position		+= BLOCK_SIZE_RECON;
 		}
 		end1 = clock();
 		time_spent1 = (float)(end1 - begin1) / CLOCKS_PER_SEC;
-
-		//printf( "time spent on block_update: %lf ,and image_update: %lf milliseconds\n", 0.0f, total_time2 );
+	  
+		
 		printf( "time spent on iteration %d : %lf seconds\n", iteration, time_spent1 );
-
+		
 		sprintf(iterate_filename, "%s%d", "x_", iteration );
-
+		
 		if( WRITE_X_KI ) {
 			transfer_image_device_to_host();
-			array_2_disk(iterate_filename, OUTPUT_DIRECTORY, OUTPUT_FOLDER, x_h, COLUMNS, ROWS, SLICES, NUM_VOXELS, true );
+			array_2_disk(iterate_filename, OUTPUT_DIRECTORY, OUTPUT_FOLDER, x_h, COLUMNS, ROWS, SLICES, NUM_VOXELS, true ); 
 		}
-
-
-
+		
+		
+	  
 	  }
-
-	  */
-
-
+	  //////////////////////////////////////////////////////////////////////////////////////////////////////////////END of TRANSFER DATA RECON TO MEMORY ALL at ONCE////////////////////////////////////////////////////////////////////////////////////////////////
+	  
+	  
+	  
+	  
 
 }
 void image_reconstruction_GPU_tabulated()
@@ -7088,15 +7045,15 @@ void image_reconstruction_GPU_tabulated()
 
 	if( WRITE_X_KI )
 	{
-		//transfer_device_to_host();
+		
 		array_2_disk(iterate_filename, OUTPUT_DIRECTORY, OUTPUT_FOLDER, x_h, COLUMNS, ROWS, SLICES, NUM_VOXELS, true );
 	}
 
 	printf("%d\n",post_cut_histories);
 
-	//post_cut_histories = 50000000;
+	
 	first_MLP_voxel_vector.resize( post_cut_histories );
-	//num_histories = 60000000;
+	
 
 	// Allocate GPU memory for x, hull, x_update, and S
 	transfer_reconstruction_images();
@@ -7123,6 +7080,24 @@ void image_reconstruction_GPU_tabulated()
 		remaining_histories -= MAX_ENDPOINTS_HISTORIES;
 		start_position		+= MAX_ENDPOINTS_HISTORIES;
 	}
+	
+	
+	// **Free memory after reconstruction_cuts_preallocated is finished
+	cudaFree(intersected_hull_d);
+	cudaFree(first_MLP_voxel_d);
+	cudaFree(x_entry_d);
+	cudaFree(y_entry_d);
+	cudaFree(z_entry_d);
+	cudaFree(x_exit_d);
+	cudaFree(y_exit_d);
+	cudaFree(z_exit_d);
+	cudaFree(xy_entry_angle_d);
+	cudaFree(xz_entry_angle_d);
+	cudaFree(xy_exit_angle_d);
+	cudaFree(xz_exit_angle_d);
+	
+	free(intersected_hull_h); 
+	
 	// Original reconstruction cuts
 	//printf("start remaining histories: %d\n", remaining_histories);
 	//begin1 = clock();
@@ -7152,8 +7127,7 @@ void image_reconstruction_GPU_tabulated()
 	int column_blocks = static_cast<int>(COLUMNS/VOXELS_PER_THREAD);
 	dim3 dimBlock( SLICES );
 	dim3 dimGrid( column_blocks, ROWS );
-	//dim3 dimGrid( COLUMNS, ROWS );
-	//dim3 dimGrid( COLUMNS/VOXELS_PER_THREAD, ROWS );
+	
 
 	init_image_GPU<<< dimGrid, dimBlock >>>(x_update_d, intersection_counts_d);
 	cudaError_t err = cudaGetLastError();
@@ -7162,26 +7136,25 @@ void image_reconstruction_GPU_tabulated()
 
 
 	generate_trig_tables();
-	//import_trig_tables();
+	
 	generate_scattering_coefficient_table();
-	//import_scattering_coefficient_table();
+	
 	generate_polynomial_tables();
-	//import_polynomial_tables();
+	
 	tables_2_GPU();
 	// Preallocate GPU memory for DROP reconstruction
 	drop_cuts_allocations();
+	
 	for(int iteration = 1; iteration <= ITERATIONS ; ++iteration) {
 
 		float total_time1=0.0, total_time2 = 0.0;
 		i=0;
 		printf("Performing iteration %u of image reconstruction\n", iteration);
 		begin1 = clock();
-		//transfer_intermediate_results_host_to_device( reconstruction_histories );
-		//start_position = 0;
+		
 		remaining_histories = reconstruction_histories;
 		start_position = 0;
-		//dim3 dimBlock( SLICES );
-		//dim3 dimGrid( COLUMNS/VOXELS_PER_THREAD, ROWS );
+		
 		while( remaining_histories > 0 )
 		{
 			if( remaining_histories > DROP_BLOCK_SIZE )
@@ -7204,14 +7177,7 @@ void image_reconstruction_GPU_tabulated()
 			//cudaEventRecord(start, 0);
 			image_update_GPU<<< dimGrid, dimBlock >>>( x_d, x_update_d, intersection_counts_d );
 
-			//drop_cuts_memory_clean();
-
-			//cudaEventRecord(stop, 0);
-			//cudaEventSynchronize(stop);
-			//cudaEventElapsedTime(&time, start, stop);
-
-			//time_spent2 = (float)(end2 - begin2) / CLOCKS_PER_SEC;
-			//total_time2+=time;
+			
 			remaining_histories -= DROP_BLOCK_SIZE;
 			start_position		+= DROP_BLOCK_SIZE;
 		}
@@ -7219,10 +7185,10 @@ void image_reconstruction_GPU_tabulated()
 		end1 = clock();
 		time_spent1 = (float)(end1 - begin1) / CLOCKS_PER_SEC;
 
-		//printf( "time spent on block_update: %lf ,and image_update: %lf milliseconds\n", 0.0f, total_time2 );
+		
 		printf( "time spent on iteration %d : %lf seconds\n", iteration, time_spent1 );
 
-		//sprintf(iterate_filename, "%s%d", "x_", iteration );
+		
 		sprintf(iterate_filename, "%s%d", "x_", iteration );
 		if( WRITE_X_KI ) {
 			transfer_image_device_to_host();
@@ -7231,7 +7197,7 @@ void image_reconstruction_GPU_tabulated()
 	}
 
 
-
+	drop_cuts_memory_clean();
 
 	//printf("RECON hist %d\n", reconstruction_histories);
 
