@@ -75,11 +75,10 @@ EXTRA_LDFLAGS   ?=
 EXTRA_CCFLAGS   ?= -fopenmp
 
 # CUDA code generation flags
-GENCODE_SM10    := -gencode arch=compute_10,code=sm_10
-GENCODE_SM20    := -gencode arch=compute_20,code=sm_20
 GENCODE_SM30    := -gencode arch=compute_30,code=sm_30
+GENCODE_SM35    := -gencode arch=compute_35,code=sm_35
 #GENCODE_FLAGS   := $(GENCODE_SM10) $(GENCODE_SM20) $(GENCODE_SM30)
-GENCODE_FLAGS   := $(GENCODE_SM20)
+GENCODE_FLAGS   := $(GENCODE_SM35)
 
 # Common binaries
 NVCC            ?= $(CUDA_BIN_PATH)/nvcc
@@ -102,9 +101,9 @@ EXEC     := $(EXEC_DIR)/pCT_Reconstruction
 
 # Compile flags
 ifeq ($(OS_SIZE),32)
-      NVCCFLAGS := -m32 -arch=sm_20 -O3 #--compiler-bindir $(GCC_BINDIR)
+      NVCCFLAGS := -m32 -O3 $(GENCODE_FLAGS) #--compiler-bindir $(GCC_BINDIR)
 else
-      NVCCFLAGS := -m64 -arch=sm_20 -O3 #--compiler-bindir $(GCC_BINDIR)
+      NVCCFLAGS := -m64 -O3 $(GENCODE_FLAGS) #--compiler-bindir $(GCC_BINDIR)
 endif
 
 # OS-specific build flags
@@ -129,7 +128,7 @@ all: $(EXEC)
 $(EXEC): makedirectory $(OBJ)
 	$(NVCC) $(OBJ) -o $@
 $(OBJ_DIR)/%.cu.o: $(SRC_DIR)/%.cu
-	$(NVCC) -v $(NVCCFLAGS) $(GENCODE_FLAGS) $(INCLUDES) -o $@ -c $<
+	$(NVCC) -v $(NVCCFLAGS) $(INCLUDES) -o $@ -c $<
 $(OBJ_DIR)/%.c.o: $(SRC_DIR)/%.c
 	$(NVCC) -v $(NVCCFLAGS) $(INCLUDES) -o $@ -c $<
 makedirectory:
