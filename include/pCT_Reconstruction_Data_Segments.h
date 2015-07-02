@@ -152,9 +152,9 @@ const bool SM_ON						= false;							// Turn Space Modeling on (T) or off (F)
 const bool AVG_FILTER_HULL				= true;								// Apply averaging filter to hull (T) or not (F)
 const bool COUNT_0_WEPLS				= false;							// Count the number of histories with WEPL = 0 (T) or not (F)
 const bool REALLOCATE					= false;
-const bool MLP_FILE_EXISTS				= true;
+const bool MLP_FILE_EXISTS				= false;
 const bool MLP_ENDPOINTS_FILE_EXISTS	= true;
-bool MODIFY_MLP = true;
+bool MODIFY_MLP = false;
 /***************************************************************************************************************************************************************************/
 /***************************************************************** Input/output specifications and options *****************************************************************/
 /***************************************************************************************************************************************************************************/
@@ -162,8 +162,8 @@ bool MODIFY_MLP = true;
 /***************************************************************************************************************************************************************************/
 /******************************************************************* Path to the input/output directories ******************************************************************/
 /***************************************************************************************************************************************************************************/
-const char INPUT_DIRECTORY[]   = "//home//karbasi//Public//";
-const char OUTPUT_DIRECTORY[]  = "//home//karbasi//Public//";
+const char INPUT_DIRECTORY[]   = "//local//";
+const char OUTPUT_DIRECTORY[]  = "//local//";
 /***************************************************************************************************************************************************************************/
 /******************************************** Name of the folder where the input data resides and output data is to be written *********************************************/
 /***************************************************************************************************************************************************************************/
@@ -263,7 +263,7 @@ const bool WRITE_AVG_FBP		= true;								// Write average filtered FBP image bef
 const bool WRITE_MEDIAN_FBP		= false;							// Write median filtered FBP image to disk (T) or not (F)
 const bool WRITE_FILTERED_HULL		= true;								// Write average filtered FBP image to disk (T) or not (F)
 const bool WRITE_X_HULL			= true;								// Write the hull selected to be used in MLP calculations to disk (T) or not (F)
-const bool WRITE_X_K0			= true;								// Write the hull selected to be used in MLP calculations to disk (T) or not (F)
+const bool WRITE_X_0			= true;								// Write the hull selected to be used in MLP calculations to disk (T) or not (F)
 const bool WRITE_X_KI			= true;								// Write the hull selected to be used in MLP calculations to disk (T) or not (F)
 const bool WRITE_X				= false;							// Write the reconstructed image to disk (T) or not (F)
 /***************************************************************************************************************************************************************************/
@@ -286,8 +286,8 @@ const bool WRITE_SSD_ANGLES    = false;									// Write angles for each proton 
 /************************************************************* Host/GPU computation and structure information **************************************************************/
 /***************************************************************************************************************************************************************************/
 #define BYTES_PER_HISTORY		48								// [bytes] Data size of each history, 44 for actual data and 4 empty bytes, for old data format
-#define MAX_GPU_HISTORIES		static_cast<int>(2500000)		// [#] Number of histories to process on the GPU at a time, based on GPU capacity
-#define MAX_CUTS_HISTORIES		static_cast<int>(1500000)
+#define MAX_GPU_HISTORIES		static_cast<int>(3200000)		// [#] Number of histories to process on the GPU at a time, based on GPU capacity
+#define MAX_CUTS_HISTORIES		static_cast<int>(3200000)
 								// [#] Number of threads assigned to each block on the GPU
 /***************************************************************************************************************************************************************************/
 /**************************************** Scanning and detector system	(source distance, tracking plane dimensions) parameters ********************************************/
@@ -365,7 +365,6 @@ const unsigned int FBP_MEDIAN_RADIUS = 3;
 enum  HULL_TYPES {SC_HULL, MSC_HULL, SM_HULL, FBP_HULL };				// Define valid choices for which hull to use in MLP calculations
 const HULL_TYPES				MLP_HULL = MSC_HULL;					// Specify which of the HULL_TYPES to use in this run's MLP calculations
 #define E_0						13.6									// [MeV/c] empirical constant
-#define X_0						36.08									// [cm] radiation length
 #define X0						36.08									// [cm] radiation length
 #define RSP_AIR					0.00113									// [cm/cm] Approximate RSP of air
 #define VOXEL_STEP_SIZE			( VOXEL_WIDTH / 2 )						// [cm] Length of the step taken along the path, i.e. change in depth per step for
@@ -428,7 +427,7 @@ const bool DIRECT_IMAGE_RECONSTRUCTION = false;
 const unsigned int ITERATE_FILTER_RADIUS = 3;
 const double ITERATE_FILTER_THRESHOLD = 0.1;
 enum  INITIAL_ITERATE { X_HULL, FBP_IMAGE, HYBRID, ZEROS, IMPORT };		// Define valid choices for which hull to use in MLP calculations
-const INITIAL_ITERATE			X_K0 = HYBRID;							// Specify which of the HULL_TYPES to use in this run's MLP calculations
+const INITIAL_ITERATE			X_0 = HYBRID;							// Specify which of the HULL_TYPES to use in this run's MLP calculations
 
 #define DECAY_FACTOR			(0.99 / pow(RECON_CYL_RADIUS, 2.0 ))	// Defines "a" in the lambda scaling factor 1 - a*r(i)^2 used to generate a radially dependent lambda
 #define EXPONENTIAL_DECAY		(5/RECON_CYL_RADIUS)					// Defines "a" in the lambda scaling factor exp(-a*r) used to generate a radially dependent lambda
@@ -447,9 +446,9 @@ double* norm_Ai;
 float LAMBDA = 0.001;// Relaxation parameter to use in image iterative projection reconstruction algorithms	
 #define ITERATIONS				12										// # of iterations through the entire set of histories to perform in iterative image reconstruction
 
-#define BLOCK_SIZE				static_cast<int>(320000)//15000000//3840// # of paths to use for each update: ART = 1, 
-#define BLOCK_SIZE_RECON		static_cast<int>(3200)//3840// # of paths to use for each update: ART = 1, 
-#define DROP_BLOCK_SIZE			static_cast<int>(3200)//3840// # of paths to use for each update: ART = 1, 
+//#define BLOCK_SIZE			static_cast<int>(320000)//15000000//3840// # of paths to use for each update: ART = 1, 
+//#define BLOCK_SIZE_RECON		static_cast<int>(3200)//3840// # of paths to use for each update: ART = 1, 
+#define DROP_BLOCK_SIZE			static_cast<int>(320000)//3840// # of paths to use for each update: ART = 1, 
 
 #define CONSTANT_CHORD_NORM		pow(VOXEL_WIDTH, 2.0)
 double CONSTANT_LAMBDA_SCALE =	VOXEL_WIDTH * LAMBDA;
@@ -462,8 +461,36 @@ double CONSTANT_LAMBDA_SCALE =	VOXEL_WIDTH * LAMBDA;
 #define HISTORIES_PER_THREAD 		static_cast<int>(1)
 #define VOXELS_PER_THREAD 		static_cast<int>(1)
 
-#define MAX_ENDPOINTS_HISTORIES 	static_cast<int>(2500000)
+#define MAX_ENDPOINTS_HISTORIES 	static_cast<int>(64000000)
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+/*-------------------------------------------------------------------- Timers ----------------------------------------------------------------*/
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+clock_t begin_endpoints, end_endpoints, clock_cycles_endpoints;
+clock_t begin_init_image, end_init_image, clock_cycles_init_image;
+clock_t begin_tables, end_tables, clock_cycles_tables;
+clock_t begin_DROP_iteration, end_DROP_iteration, clock_cycles_DROP_iteration;
+clock_t begin_DROP, end_DROP, clock_cycles_DROP;
+clock_t begin_update_calcs, end_update_calcs, clock_cycles_update_calcs;
+clock_t begin_update_image, end_update_image, clock_cycles_update_image;
+clock_t begin_preprocessing, end_preprocessing, clock_cycles_preprocessing;
+clock_t begin_reconstruction, end_reconstruction, clock_cycles_reconstruction;
+clock_t begin_program, end_program, clock_cycles_program;
 
+double execution_time_endpoints, execution_time_init_image, execution_time_DROP_iteration, execution_time_DROP, execution_time_update_calcs, execution_time_update_image, execution_time_tables;
+double execution_time_preprocessing, execution_time_reconstruction, execution_time_program; 
+std::vector<double> execution_times_DROP_iterations;
+const char* execution_times_filename = "execution_times.txt";
+FILE* execution_times_file;
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+/*-------------------------------------------------------------------- Testing parameters/options controls ----------------------------------------------------------------*/
+/*-------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+enum TX_OPTIONS{ FULL_TX, PARTIAL_TX, PARTIAL_TX_PREALLOCATED};
+enum ENDPOINTS_ALGORITHMS{BOOL, NO_BOOL};
+enum MLP_ALGORITHMS{STANDARD, TABULATED};
+TX_OPTIONS ENDPOINTS_TX_MODE = FULL_TX;
+TX_OPTIONS DROP_TX_MODE = FULL_TX;
+ENDPOINTS_ALGORITHMS ENDPOINTS_ALG = NO_BOOL;
+MLP_ALGORITHMS MLP_ALGORITHM = STANDARD;
 //#define CONSTANT_LAMBDA_SCALE	VOXEL_WIDTH * LAMBDA
 /*-------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
 /*------------------------------------------------------------------------- Tabulated data file names ---------------------------------------------------------------------*/
@@ -622,7 +649,7 @@ bool* SC_hull_h, * SC_hull_d;
 bool* MSC_hull_h, * MSC_hull_d;
 bool* SM_hull_h, * SM_hull_d;
 bool* FBP_hull_h, * FBP_hull_d;
-bool* x_hull_h, * x_hull_d;
+bool* hull_h, * hull_d;
 int* MSC_counts_h, * MSC_counts_d;
 int* SM_counts_h, * SM_counts_d;
 int* MLP_test_image_h, * MLP_test_image_d;
@@ -633,7 +660,7 @@ double* x_update_h;
 float* x_update_d;
 bool* intersected_hull_h, * intersected_hull_d;
 unsigned int* num_voxel_intersections_h, * num_voxel_intersections_d;
-unsigned int* intersection_counts_h, * intersection_counts_d;
+unsigned int* S_h, * S_d;
 unsigned int* block_voxels_h, *block_voxels_d;
 unsigned int* block_counts_h, * block_counts_d;
 float* x_h, * x_d;
