@@ -3,7 +3,7 @@ ____________________________
 
 ## Run Test
 
-This branch is setup for running test on tardis-student2 workstation. Folders should setup already, just need to Run
+This branch is setup for running test on tardis cluster. Folders should setup already, just need to Run
 ```shell
 make clean && make && make run
 ```
