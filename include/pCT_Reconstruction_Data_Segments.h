@@ -162,8 +162,8 @@ bool MODIFY_MLP = false;
 /***************************************************************************************************************************************************************************/
 /******************************************************************* Path to the input/output directories ******************************************************************/
 /***************************************************************************************************************************************************************************/
-const char INPUT_DIRECTORY[]   = "//local//";
-const char OUTPUT_DIRECTORY[]  = "//local//";
+const char INPUT_DIRECTORY[]   = "//home//karbasi//Public//";
+const char OUTPUT_DIRECTORY[]  = "//home//karbasi//Public//";
 /***************************************************************************************************************************************************************************/
 /******************************************** Name of the folder where the input data resides and output data is to be written *********************************************/
 /***************************************************************************************************************************************************************************/
@@ -178,7 +178,7 @@ const char OUTPUT_DIRECTORY[]  = "//local//";
 //const char INPUT_FOLDER[]	   = "beam-Sep2014\\bin-CIRSFordSup";
 //const char OUTPUT_FOLDER[]	   = "beam-Sep2014\\bin-CIRSFordSup";
 const char INPUT_FOLDER[]	   = "input_CTP404_4M";
-const char OUTPUT_FOLDER[]         = "cuda_test";
+const char OUTPUT_FOLDER[]         = "B3200L0.0009";
 //const char INPUT_FOLDER[]	   = "output_HeadPhantom";
 //const char OUTPUT_FOLDER[]	   = "output_HeadPhantom";
 //const char INPUT_FOLDER[]	   = "PedHead-july";
@@ -443,12 +443,12 @@ unsigned int METHOD                             = 1;
 int PSI_SIGN                           = 1;
 double* norm_Ai;
 //#define LAMBDA					0.0001	
-float LAMBDA = 0.001;// Relaxation parameter to use in image iterative projection reconstruction algorithms	
+float LAMBDA = 0.0009;// Relaxation parameter to use in image iterative projection reconstruction algorithms	
 #define ITERATIONS				12										// # of iterations through the entire set of histories to perform in iterative image reconstruction
 
 //#define BLOCK_SIZE			static_cast<int>(320000)//15000000//3840// # of paths to use for each update: ART = 1, 
 //#define BLOCK_SIZE_RECON		static_cast<int>(3200)//3840// # of paths to use for each update: ART = 1, 
-#define DROP_BLOCK_SIZE			static_cast<int>(320000)//3840// # of paths to use for each update: ART = 1, 
+#define DROP_BLOCK_SIZE			static_cast<int>(3200)//3840// # of paths to use for each update: ART = 1, 
 
 #define CONSTANT_CHORD_NORM		pow(VOXEL_WIDTH, 2.0)
 double CONSTANT_LAMBDA_SCALE =	VOXEL_WIDTH * LAMBDA;
