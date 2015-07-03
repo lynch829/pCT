@@ -79,7 +79,7 @@ GENCODE_SM10    := -gencode arch=compute_10,code=sm_10
 GENCODE_SM20    := -gencode arch=compute_20,code=sm_20
 GENCODE_SM30    := -gencode arch=compute_30,code=sm_30
 GENCODE_SM35   	:= -gencode arch=compute_35,code=sm_35
-GENCODE_FLAGS   := $(GENCODE_SM35)
+GENCODE_FLAGS   := $(GENCODE_SM30)
 
 # Common binaries
 NVCC            ?= $(CUDA_BIN_PATH)/nvcc
@@ -102,9 +102,9 @@ EXEC     := $(EXEC_DIR)/pCT_Reconstruction
 
 # Compile flags
 ifeq ($(OS_SIZE),32)
-      NVCCFLAGS := -m32 -arch=sm_35 -O3 #--compiler-bindir $(GCC_BINDIR)
+      NVCCFLAGS := -m32 -arch=sm_30 -O3 #--compiler-bindir $(GCC_BINDIR)
 else
-      NVCCFLAGS := -m64 -arch=sm_35 -O3 #--compiler-bindir $(GCC_BINDIR)
+      NVCCFLAGS := -m64 -arch=sm_30 -O3 #--compiler-bindir $(GCC_BINDIR)
 endif
 
 # OS-specific build flags
@@ -140,7 +140,7 @@ makedirectory:
 run: $(EXEC)
 	./$(EXEC)
 cuda_prof_run: $(EXEC)
-	nvprof --log-file $(LOG_FILE) ./$(EXEC)
+	nvprof --print-gpu-trace --log-file $(LOG_FILE) ./$(EXEC)
 clean:
 	rm -rf $(OBJ_DIR) $(EXEC_DIR)
 test:

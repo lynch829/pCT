@@ -6749,13 +6749,13 @@ __global__ void block_update_GPU
 	double effective_chord_length = 0.0;
 	int number_of_intersections;
 	
-	int proton_id =  start_proton_id + threadIdx.x * HISTORIES_PER_THREAD + blockIdx.x * HISTORIES_PER_BLOCK * HISTORIES_PER_THREAD;
+	//int proton_id =  start_proton_id + threadIdx.x * HISTORIES_PER_THREAD + blockIdx.x * HISTORIES_PER_BLOCK * HISTORIES_PER_THREAD;
 		
-	if( proton_id < num_histories ) 
-	{
+	//if( proton_id < num_histories ) 
+	//{
 	  	  
-		unsigned int* a_i;
-		a_i = (unsigned int*)malloc( MAX_INTERSECTIONS * sizeof(unsigned int));
+		unsigned int a_i[MAX_INTERSECTIONS];
+		
 		
 		//__shared__ unsigned int* a_i[MAX_INTERSECTIONS];
 		
@@ -6770,7 +6770,7 @@ __global__ void block_update_GPU
 			//int proton_id = blockIdx.x * blockDim.x + threadIdx.x + start_proton_id;	  
 			//int proton_id =  history + threadIdx.x * HISTORIES_PER_THREAD + start_proton_id; 			
 			//proton_id =  start_proton_id + history + threadIdx.x * HISTORIES_PER_THREAD + blockIdx.x * HISTORIES_PER_BLOCK;
-			
+			int proton_id =  start_proton_id + threadIdx.x * HISTORIES_PER_THREAD + blockIdx.x * HISTORIES_PER_BLOCK * HISTORIES_PER_THREAD;
 			if( proton_id < num_histories ) 
 			{		  
 				//float update_value_history = 0.0;
@@ -6799,7 +6799,7 @@ __global__ void block_update_GPU
 			proton_id++;
 		}	
 		free(a_i);    	 
-	}		
+	//}		
 }
 __global__ void block_update_GPU_tabulated
 (
@@ -6819,10 +6819,10 @@ __global__ void block_update_GPU_tabulated
 	
 	
 	int voxel;
-	int proton_id =  start_proton_id + threadIdx.x * HISTORIES_PER_THREAD + blockIdx.x * HISTORIES_PER_BLOCK;
+	//int proton_id =  start_proton_id + threadIdx.x * HISTORIES_PER_THREAD + blockIdx.x * HISTORIES_PER_BLOCK;
 			
-	if( proton_id < num_histories ) 
-	{	 	  
+	//if( proton_id < num_histories ) 
+	//{	 	  
 		unsigned int a_i[MAX_INTERSECTIONS];
 		//a_i = (unsigned int*)malloc( MAX_INTERSECTIONS * sizeof(unsigned int));
 		
@@ -6835,7 +6835,7 @@ __global__ void block_update_GPU_tabulated
 			//int proton_id = blockIdx.x * blockDim.x + threadIdx.x + start_proton_id;	  
 			//int proton_id =  history + threadIdx.x * HISTORIES_PER_THREAD + start_proton_id; 		
 			//proton_id =  start_proton_id + history + threadIdx.x * HISTORIES_PER_THREAD + blockIdx.x * HISTORIES_PER_BLOCK;
-			
+			int proton_id =  start_proton_id + threadIdx.x * HISTORIES_PER_THREAD + blockIdx.x * HISTORIES_PER_BLOCK * HISTORIES_PER_THREAD;
 			if( proton_id < num_histories ) 
 			{		  
 				float update_value_history = 0.0;
@@ -6859,7 +6859,7 @@ __global__ void block_update_GPU_tabulated
 			proton_id++;
 		}	
 		free(a_i);  	
-	}		
+	//}		
 }
 __global__ void init_image_GPU(float* x_update, unsigned int* S) 
 {
