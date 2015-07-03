@@ -1,2 +1,3 @@
-//home//karbasi//Public//B3200L0.0009
-//home//karbasi//Public//B3200L0.001
+//home//karbasi//Public//B3200L0.0009	33 secs/iteration
+//home//karbasi//Public//B3200L0.0010
+//home//karbasi//Public//B3200L0.0011
