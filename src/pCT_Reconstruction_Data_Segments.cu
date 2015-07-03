@@ -17,8 +17,10 @@
 /***********************************************************************************************************************************************************************************************************************/
 
 // Execution Control Functions
+void execution_times_2_csv();
 bool is_bad_angle( const int );	// Just for use with Micah's simultated data
 void timer( bool, clock_t&, clock_t&, double&, const char*);
+double timer( bool, clock_t&, const char*);
 void exit_program_if( bool);
 void pause_execution();
 void exit_program_if( bool, const char* );
@@ -28,8 +30,6 @@ void initial_processing_memory_clean();
 void resize_vectors( unsigned int );
 void shrink_vectors( unsigned int );
 void data_shift_vectors( unsigned int, unsigned int );
-void allocations( const unsigned int );
-void reallocations( const unsigned int );
 void post_cut_memory_clean(); 
 
 // Image Initialization/Construction Functions
@@ -83,6 +83,7 @@ void MSC_edge_detection();
 void SM( const int );
 void SM_edge_detection();
 void SM_edge_detection_2();
+void hull_conversion_int_2_bool( int* );
 void hull_selection();
 template<typename T, typename T2> void averaging_filter( T*&, T2*&, int, bool, double );
 template<typename H, typename D> void median_filter( H*&, D*&, unsigned int );
@@ -99,6 +100,7 @@ double EffectiveChordLength(double, double);
 
 
 // Image Reconstruction
+void initial_iterate_generate_hybrid();
 void define_initial_iterate();
 void create_hull_image_hybrid();
 void image_reconstruction();
@@ -150,7 +152,7 @@ void read_MLP_path_error(FILE*, float*&, unsigned int);
 void export_hull();
 void import_hull();
 void write_reconstruction_settings();
-void execution_times_2_disk();
+void execution_times_2_txt();
 
 // Image position/voxel calculation functions
 int calculate_voxel( double, double, double );
@@ -174,7 +176,13 @@ template< typename T, typename T2> T max_n( int, T2, ...);
 template< typename T, typename T2> T min_n( int, T2, ...);
 template<typename T> T* sequential_numbers( int, int );
 void bin_2_indexes( int, int&, int&, int& );
-inline const char * const bool_2_string( bool b ){ return b ? "true" : "false"; }
+inline const char * bool_2_string( bool b ){ return b ? "true" : "false"; }
+
+//Console Window Print Statement Functions
+void print_section_separator(char );
+void construct_header_line( char*, char, char* );
+void print_section_header( char*, char );
+void print_section_exit( char*, char* );
 
 // New routine test functions
 void command_line_settings( unsigned int, char** );
@@ -212,6 +220,7 @@ __global__ void SC_GPU( const int, bool*, int*, bool*, float*, float*, float*, f
 __global__ void MSC_GPU( const int, int*, int*, bool*, float*, float*, float*, float*, float*, float*, float* );
 __global__ void SM_GPU( const int, int*, int*, bool*, float*, float*, float*, float*, float*, float*, float* );
 __global__ void MSC_edge_detection_GPU( int* );
+__global__ void MSC_edge_detection_GPU( int*, int* );
 __global__ void SM_edge_detection_GPU( int*, int* );
 __global__ void SM_edge_detection_GPU_2( int*, int* );
 __global__ void carve_differences( int*, int* );
@@ -227,17 +236,23 @@ void generate_scattering_coefficient_table();
 void import_scattering_coefficient_table();
 void generate_polynomial_tables();
 void import_polynomial_tables();
-void tables_2_GPU();
-void free_GPU_tables();
+void MLP_lookup_table_2_GPU();
+void free_MLP_lookup_tables();
 
 void image_reconstruction_GPU_tabulated();//*
 template<typename O> __device__ bool find_MLP_endpoints_GPU( O*, double, double, double, double, double, double&, double&, double&, int&, int&, int&, bool);                                            			//*
-__device__ void find_MLP_path_GPU(float*, double, unsigned int, double, double, double, double, double, double, double, double, double, double, double, float, unsigned int*, int&, double&, double&, double& );                        		//*
-__device__ void find_MLP_path_GPU_tabulated(float*, double, unsigned int, double, double, double, double, double, double, double, double, double, double, float, unsigned int*, float&, int&, double*, double*, double*, double*, double*, double*, double*, double*);
+//__device__ bool find_MLP_endpoints_GPU( bool*, double, double, double, double, double, double&, double&, double&, int&, int&, int&, bool); 
+__device__ void find_MLP_path_GPU(float*, double, unsigned int, double, double, double, double, double, double, double, double, double, double, double, double, unsigned int*, int&, double&, double&, double& );                        		//*
+//__device__ void find_MLP_path_GPU(float*, double, unsigned int, double, double, double, double, double, double, double, double, double, double, double, float, unsigned int*, int&, double&, double&, double& );                        		//*
+__device__ void find_MLP_path_GPU_tabulated(float*, double, unsigned int, double, double, double, double, double, double, double, double, double, double, double, float, unsigned int*, int&, double&, double&, double&, double* sin_table, double* cos_table, double* scattering_table, double* poly_1_2, double* poly_2_3, double* poly_3_4, double* poly_2_6, double* poly_3_12);
+//__device__ void find_MLP_path_GPU_tabulated(float*, double, unsigned int, double, double, double, double, double, double, double, double, double, double, float, unsigned int*, float&, int&, double*, double*, double*, double*, double*, double*, double*, double*);
 __global__ void collect_MLP_endpoints_GPU(bool*, unsigned int*, bool*, float*, float*, float*, float*, float*, float*, float*, float*, float*, float* , int, int );                               	//*
 __global__ void collect_MLP_endpoints_GPU_nobool(unsigned int*, bool*, float*, float*, float*, float*, float*, float*, float*, float*, float*, float* , int, int );                               	//*
-__global__ void block_update_GPU(float*, float*, float*, float*, float*, float*, float*, float*, float*, float*, float*, float*, unsigned int*, float*, unsigned int*, int, int, float);                                          	//*
-__global__ void block_update_GPU_tabulated(float*, float*, float*, float*, float*, float*, float*, float*, float*, float*, float*, float*, unsigned int*, float*, unsigned int*, int, int, float, double*, double*, double*, double*, double*, double*, double*, double*);
+//__global__ void block_update_GPU(float*, float*, float*, float*, float*, float*, float*, float*, float*, float*, float*, float*, unsigned int*, float*, unsigned int*, int, int, float);                                          	//*
+//__global__ void block_update_GPU_tabulated(float*, float*, float*, float*, float*, float*, float*, float*, float*, float*, float*, float*, unsigned int*, float*, unsigned int*, int, int, float, double*, double*, double*, double*, double*, double*, double*, double*);
+__global__ void block_update_GPU(float*, float*, float*, float*, float*, float*, float*, float*, float*, float*, float*, float*, unsigned int*, float*, unsigned int*, int, int, double);                                          	//*
+__global__ void block_update_GPU_tabulated(float*, float*, float*, float*, float*, float*, float*, float*, float*, float*, float*, float*, unsigned int*, float*, unsigned int*, int, int, double, double*, double*, double*, double*, double*, double*, double*, double*);
+
 __global__ void image_update_GPU(float*, double*, unsigned int*); 
 void gpu_memory_allocation( const int );//*
 void transfer_host_to_device( const int ); 
@@ -285,18 +300,6 @@ void image_reconstruction_GPU_tabulated();
 void image_reconstruction_GPU_testing();  
 void image_reconstruction_GPU_testing(); 
 __device__ double EffectiveChordLength_GPU(double, double);                                                                                                                                              			//*
-//**********************************************************************************************************************************************************************************************************
-//bool* intersected_hull, unsigned int* first_MLP_voxel, bool* hull, float* x_entry, float* y_entry, float* z_entry, float* xy_entry_angle, float* xz_entry_angle, float* x_exit, float* y_exit, float* z_exit, float* xy_exit_angle, 
-//					 float* xz_exit_angle, int post_cut_protons
-//collect_MLP_endpoints_GPU(x, hull, x_entry, y_entry, z_entry, xy_entry_angle, xz_entry_angle, x_exit, y_exit, z_exit,  xy_exit_angle, 
-//					  xz_exit_angle, WEPL, lambda, i, post_cut_protons, a_i, update_value_history, number_of_intersections);
-
-//__device__ void MLP_GPU();
-
-// Image Reconstruction GPU
-//__global__ void image_reconstruction();
-
-
 
 // Image Reconstruction
 __global__ void create_hull_image_hybrid_GPU( bool*&, float*& );
@@ -326,6 +329,8 @@ __device__ void take_2D_step_GPU( const int, const int, const int, const double,
 __device__ void take_3D_step_GPU( const int, const int, const int, const double, const double, const double, const double, const double, const double, const double, const double, const double, double&, double&, double&, int&, int&, int&, int&, double&, double&, double& );
 
 // Device helper functions
+cudaError_t CUDA_error_check( char* );
+cudaError_t CUDA_error_check_and_sync_device( char*, char* );
 
 // New routine test functions
 __global__ void test_func_GPU( int* );
@@ -336,52 +341,27 @@ __global__ void test_func_device( double*, double*, double* );
 /***********************************************************************************************************************************************************************************************************************/
 int main(int argc, char** argv)
 {
-	if( DIRECT_IMAGE_RECONSTRUCTION )
-	{
-		import_hull();
-		image_reconstruction();
-	}
+	char statement[256];
 	if( RUN_ON )
 	{
-		command_line_settings( argc, argv );
-		//pause_execution();
 		/********************************************************************************************************************************************************/
-		/* Start the execution timing clock																														*/
+		/* Perform program setup routines and start the execution timing clock																														*/
 		/********************************************************************************************************************************************************/
-		timer( START, begin_program, end_program, execution_time_program, "for entire program");
-		timer( START, begin_preprocessing, end_preprocessing, execution_time_preprocessing, "for preprocessing");
-		/********************************************************************************************************************************************************/
-		/* Initialize hull detection images and transfer them to the GPU (performed if SC_ON, MSC_ON, or SM_ON is true)											*/
-		/********************************************************************************************************************************************************/
-		hull_initializations();
-		/********************************************************************************************************************************************************/
-		/* Read the u-coordinates of the detector planes from the config file, allocate and	initialize statistical data arrays, and count the number of 		*/
-		/* histories per file, projection, gantry angle, scan, and total.																						*/
-		/********************************************************************************************************************************************************/		
-		if( DATA_FORMAT == OLD_FORMAT )
-			assign_SSD_positions();		// Read the detector plane u-coordinates from config file
+		system("echo -e \"\e[0;36m\"" );
+		sprintf( statement, "Determine the # of protons for each gantry angle and in total and initialize host/GPU arrays to accomdate this data");
+		print_section_header( statement, '*' );
+		system("echo -e \"\e[m\"" );
+		//command_line_settings( argc, argv );
+		timer( START, begin_program, "for entire program");
+		timer( START, begin_preprocessing, "for preprocessing");
+		hull_initializations();			// Initialize hull detection images and transfer them to the GPU (performed if SC_ON, MSC_ON, or SM_ON is true)		
 		initializations();				// allocate and initialize host and GPU memory for statistical
 		count_histories();				// count the number of histories per file, per scan, total, etc.
 		reserve_vector_capacity();		// Reserve enough memory so vectors don't grow into another reserved memory space, wasting time since they must be moved
-		
-		/********************************************************************************************************************************************************/
-		/* Reading the 16 energy detector responses for each of the 5 stages and generate single energy response for each history								*/
-		/********************************************************************************************************************************************************/
-		int start_file_num = 0, end_file_num = 0, histories_2_process = 0;
-		//while( start_file_num != NUM_FILES )
-		//{
-		//	while( end_file_num < NUM_FILES )
-		//	{
-		//		if( histories_2_process + histories_per_file[end_file_num] < MAX_GPU_HISTORIES )
-		//			histories_2_process += histories_per_file[end_file_num];
-		//		else
-		//			break;
-		//		end_file_num++;
-		//	}
-		//	//read_energy_responses( histories_2_process, start_file_num, end_file_num );
-		//	start_file_num = end_file_num;
-		//	histories_2_process = 0;
-		//}
+		sprintf( statement, "Proton counting and initializations complete");
+		system("echo -e \"\e[0;31m\"" );
+		print_section_exit( statement, SECTION_EXIT_STRING );
+		system("echo -e \"\e[m\"" );
 		/********************************************************************************************************************************************************/
 		/* Iteratively Read and Process Data One Chunk at a Time. There are at Most	MAX_GPU_HISTORIES Per Chunk (i.e. Iteration). On Each Iteration:			*/
 		/*	(1) Read data from file																																*/
@@ -391,10 +371,16 @@ int main(int argc, char** argv)
 		/*		storage std::vectors																															*/
 		/*	(5) Free up temporary host/GPU array memory allocated during iteration																				*/
 		/********************************************************************************************************************************************************/
+		system("echo -e \"\e[0;36m\"" );
+		sprintf( statement, "Read data from disk and perform preprocessing");
+		print_section_header( statement, '*' );
+		system("echo -e \"\e[m\"" );
+		
 		puts("Iteratively reading data from hard disk");
 		puts("Removing proton histories that don't pass through the reconstruction volume");
-		puts("Binning the data from those that did...");
-		start_file_num = 0, end_file_num = 0, histories_2_process = 0;
+		puts("Binning the data from those that did...\n");
+		timer( START, begin_data_reads, "for reading data, coordinate conversions/intersections, hull detection counts, and binning");
+		int start_file_num = 0, end_file_num = 0, histories_2_process = 0;
 		while( start_file_num != NUM_FILES )
 		{
 			while( end_file_num < NUM_FILES )
@@ -410,37 +396,38 @@ int main(int argc, char** argv)
 			binning( histories_2_process );
 			hull_detection( histories_2_process );
 			initial_processing_memory_clean();
+			
 			start_file_num = end_file_num;
 			histories_2_process = 0;
-		}
+		}		
+		execution_time_data_reads = timer( STOP, begin_data_reads, "for reading data, coordinate conversions/intersections, hull detection counts, and binning");
 		if( COUNT_0_WEPLS )
 			std::cout << "Histories with WEPL = 0 : " << zero_WEPL << std::endl;
-		puts("Data reading complete.");
+		//puts("Data reading complete.");
+		sprintf( statement, "Data reading complete.");
+		system("echo -e \"\e[0;31m\"" );
+		print_section_exit( statement, SECTION_EXIT_STRING );
+		system("echo -e \"\e[m\"" );
 		printf("%d out of %d (%4.2f%%) histories traversed the reconstruction volume\n", recon_vol_histories, total_histories, (double) recon_vol_histories / total_histories * 100  );
-		exit_program_if( EXIT_AFTER_BINNING, "through binning" );
-		/********************************************************************************************************************************************************/
-		/* Reduce vector capacities to their size, the number of histories remaining after histories that didn't intersect reconstruction volume were ignored	*/																				
-		/********************************************************************************************************************************************************/		
-		//shrink_vectors( recon_vol_histories );
-		/********************************************************************************************************************************************************/
-		/* Perform thresholding on MSC and SM hulls and write all hull images to file																			*/																					
-		/********************************************************************************************************************************************************/
+		//shrink_vectors( recon_vol_histories );	// Shrink vector capacities to their size = # histories remaining reconstruction volume intersection cuts
+		
 		hull_detection_finish();
 		exit_program_if( EXIT_AFTER_HULLS, "through hull detection" );
-		/********************************************************************************************************************************************************/
-		/* Calculate the mean WEPL, relative ut-angle, and relative uv-angle for each bin and count the number of histories in each bin							*/											
-		/********************************************************************************************************************************************************/
-		calculate_means();
-		initialize_stddev();
 		/********************************************************************************************************************************************************/
 		/* Calculate the standard deviation in WEPL, relative ut-angle, and relative uv-angle for each bin.  Iterate through the valid history std::vectors one	*/
 		/* chunk at a time, with at most MAX_GPU_HISTORIES per chunk, and calculate the difference between the mean WEPL and WEPL, mean relative ut-angle and	*/ 
 		/* relative ut-angle, and mean relative uv-angle and relative uv-angle for each history. The standard deviation is then found by calculating the sum	*/
 		/* of these differences for each bin and dividing it by the number of histories in the bin 																*/
 		/********************************************************************************************************************************************************/
-		puts("Calculating the cumulative sum of the squared deviation in WEPL and relative ut/uv angles over all histories for each bin...");
+		//puts("Calculating the cumulative sum of the squared deviation in WEPL and relative ut/uv angles over all histories for each bin...");
+		system("echo -e \"\e[0;36m\"" );
+		sprintf( statement, "Calculating the cumulative sum of the squared deviation in WEPL and relative ut/uv angles over all histories for each bin");
+		print_section_header( statement, '-' );
+		system("echo -e \"\e[m\"" );
 		int remaining_histories = recon_vol_histories;
 		int start_position = 0;
+		calculate_means();
+		initialize_stddev();
 		while( remaining_histories > 0 )
 		{
 			if( remaining_histories > MAX_CUTS_HISTORIES )
@@ -453,14 +440,16 @@ int main(int argc, char** argv)
 		} 
 		calculate_standard_deviations();
 		/********************************************************************************************************************************************************/
-		/* Allocate host memory for the sinogram, initialize it to zeros, allocate memory for it on the GPU, then transfer the initialized sinogram to the GPU	*/
-		/********************************************************************************************************************************************************/
-		initialize_sinogram();
-		/********************************************************************************************************************************************************/
 		/* Iterate through the valid history vectors one chunk at a time, with at most MAX_GPU_HISTORIES per chunk, and perform statistical cuts				*/
 		/********************************************************************************************************************************************************/
-		puts("Performing statistical cuts...");
+		system("echo -e \"\e[0;36m\"" );
+		sprintf( statement, "Perform statistical cuts and use the remaining data to generate the sinogram and FBP image");
+		print_section_header( statement, '-' );
+		system("echo -e \"\e[m\"" );
+		
 		remaining_histories = recon_vol_histories, start_position = 0;
+		initialize_sinogram();
+		puts("Performing statistical cuts...");
 		while( remaining_histories > 0 )
 		{
 			if( remaining_histories > MAX_CUTS_HISTORIES )
@@ -471,64 +460,81 @@ int main(int argc, char** argv)
 			remaining_histories -= MAX_CUTS_HISTORIES;
 			start_position		+= MAX_CUTS_HISTORIES;
 		}
-		puts("Statistical cuts complete.");
+		//puts("Statistical cuts complete.");
+		system("echo -e \"\e[0;31m\"" );
+		sprintf( statement, "Statistical cuts complete.");
+		print_section_exit( statement, SECTION_EXIT_STRING );
+		system("echo -e \"\e[m\"" );
+		
 		printf("%d out of %d (%4.2f%%) histories also passed statistical cuts\n", post_cut_histories, total_histories, (double) post_cut_histories / total_histories * 100  );
-		/********************************************************************************************************************************************************/
-		/* Free host memory for bin number array, free GPU memory for the statistics arrays, and shrink svectors to the number of histories that passed cuts	*/
-		/********************************************************************************************************************************************************/		
 		post_cut_memory_clean();
 		resize_vectors( post_cut_histories );
 		//shrink_vectors( post_cut_histories );
 		exit_program_if( EXIT_AFTER_CUTS, "through statistical data cuts" );
 		/********************************************************************************************************************************************************/
-		/* Recalculate the mean WEPL for each bin using	the histories remaining after cuts and use these to produce the sinogram								*/
+		/* Generate the sinogram from remaining histories after cuts, perform filtered backprojection, and generate/define the hull/initial iterate to use		*/
 		/********************************************************************************************************************************************************/
+		puts("Constructing sinogram...");
 		construct_sinogram();
 		exit_program_if( EXIT_AFTER_SINOGRAM, "through sinorgram generation" );
-		/********************************************************************************************************************************************************/
-		/* Perform filtered backprojection and write FBP hull to disk																							*/
-		/********************************************************************************************************************************************************/
 		if( FBP_ON )
 			FBP();
 		exit_program_if( EXIT_AFTER_FBP, "through FBP" );
 		hull_selection();
 		define_initial_iterate();
-		//image_reconstruction();
-		/********************************************************************************************************************************************************/
-		/* END OF PREPROCESSING: Stop preprocessing timer and continue to image reconstruction																						*/
-		/********************************************************************************************************************************************************/
-		timer( STOP, begin_preprocessing, end_preprocessing, execution_time_preprocessing, "for preprocessing");
+		system("echo -e \"\e[0;31m\"" );
+		sprintf( statement, "Preprocessing complete");
+		print_section_exit(statement, SECTION_EXIT_STRING );
+		system("echo -e \"\e[m\"" );
+		execution_time_preprocessing = timer( STOP, begin_preprocessing, "for preprocessing");
+		
 		/********************************************************************************************************************************************************/
 		/* Perform image reconstruction																							*/
 		/********************************************************************************************************************************************************/		
-		timer( START, begin_reconstruction, end_reconstruction, execution_time_reconstruction, "for complete image reconstruction");
-		//exit(0);
+		system("echo -e \"\e[0;36m\"" );
+		sprintf( statement, "Image Reconstruction");
+		print_section_header( statement, '*' );
+		system("echo -e \"\e[m\"" );
+		
+		timer( START, begin_reconstruction, "for complete image reconstruction");
+		//image_reconstruction();
 		image_reconstruction_GPU(); // Write to the external file	 	
-		//printf( "Execution time for complete reconstruction time spent on image_reconstruction_GPU() : %lf seconds\n", execution_time_reconstruction );
-		//generate_trig_tables();
-		//generate_scattering_coefficient_table();
-		//generate_polynomial_tables();
 		//image_reconstruction_GPU_tabulated();
-		//image_reconstruction_GPU_testing();
-		timer( STOP, begin_reconstruction, end_reconstruction, execution_time_reconstruction, "for complete image reconstruction");
-		if( WRITE_X ) {
-		   char x[] ={"x"};
-			array_2_disk(x, OUTPUT_DIRECTORY, OUTPUT_FOLDER, x_h, COLUMNS, ROWS, SLICES, NUM_VOXELS, true );}
+		//image_reconstruction_GPU_testing(); // Write to the external file	 	
+		execution_time_reconstruction = timer( STOP, begin_reconstruction, "for complete image reconstruction");
+		execution_times_2_csv();
+		if( WRITE_X ) 
+		{
+			char x[] ={"x"};
+			array_2_disk(x, OUTPUT_DIRECTORY, OUTPUT_FOLDER, x_h, COLUMNS, ROWS, SLICES, NUM_VOXELS, true );
+		}
+		system("echo -e \"\e[0;31m\"" );
+		sprintf( statement, "Reconstruction complete");
+		print_section_exit( statement, SECTION_EXIT_STRING );
+		system("echo -e \"\e[m\"" );
 	}
 	else
 	{
-		//binary_2_ASCII();
 		test_func();
-		//combine_data_sets();
 		puts("finished program");
 	}
 	/************************************************************************************************************************************************************/
 	/* Program has finished execution. Require the user to hit enter to terminate the program and close the terminal/console window	and write execution times to disk							*/ 															
 	/************************************************************************************************************************************************************/
-	puts("Preprocessing and/or reconstruction complete.  Press enter to close the console window...");
-	//exit_program_if(true);
-	timer( STOP, begin_program, end_program, execution_time_program, "for entire program");
-	execution_times_2_disk();
+	//puts("Preprocessing and/or reconstruction complete.  Press enter to close the console window...");
+	system("echo -e \"\e[0;31m\"" );
+	sprintf( statement, "Preprocessing and/or reconstruction complete.");
+	print_section_exit( statement, SECTION_EXIT_STRING );
+	execution_time_program = timer( STOP, begin_program, "for entire program");
+	system("echo -e \"\e[m\"" );
+		
+	//execution_times_2_txt();
+	system("echo -e \"\e[0;31m\"" );
+	sprintf( statement, "PROGRAM HAS COMPLETED EXECUTION");
+	print_section_exit( statement, SECTION_EXIT_STRING );
+	system("echo -e \"\e[m\"" );
+		
+	exit_program_if(true);
 	//exit(1);
 }
 /***********************************************************************************************************************************************************************************************************************/
@@ -567,14 +573,31 @@ void timer( bool start, clock_t& start_time, clock_t& end_time, double& executio
 {
 	if( start )
 		start_time = clock();
-	else
+	else if( !start )
 	{
 		end_time = clock();
-		clock_t execution_clock_cycles = (end_time - start_time) - pause_cycles;
+		clock_t execution_clock_cycles = (end_time - start_time);
 		execution_time = static_cast<double>( execution_clock_cycles) / CLOCKS_PER_SEC;
 		printf( "Total execution time %s: %3f [seconds]\n", statement, execution_time );	
 	}
+	else
+		puts("ERROR: Invalid timer control parameter passed");
 }
+double timer( bool start, clock_t& start_time, const char* statement )
+{
+	double execution_time = 0.0;
+	if( start )
+		start_time = clock();
+	else
+	{
+		clock_t end_time = clock();
+		clock_t execution_clock_cycles = (end_time - start_time);
+		execution_time = static_cast<double>( execution_clock_cycles) / CLOCKS_PER_SEC;
+		printf( "Total execution time %s: %3f [seconds]\n", statement, execution_time );	
+	}
+	return execution_time;
+}
+
 void pause_execution()
 {
 	clock_t pause_start, pause_end;
@@ -595,7 +618,8 @@ void exit_program_if( bool early_exit, const char* statement)
 		char user_response[20];
 		double execution_time;
 		timer( STOP, program_start, program_end, execution_time, statement );
-		puts("Hit enter to stop...");
+		char statement[] = "Press 'ENTER' to exit program and close console window";
+		print_section_header( statement, '*' );
 		fgets(user_response, sizeof(user_response), stdin);
 		exit(1);
 	}
@@ -619,56 +643,6 @@ void command_line_settings( unsigned int num_arguments, char** arguments )
 {
 	num_run_arguments = num_arguments;
 	run_arguments = arguments; 
-	char keyword[30];
-	/*if (num_arguments > 1) {
-	  
-		for(int i = 1 ; i <= num_arguments; i+=2) {
-		  
-			//for(int j = 0 ; j < NUM_KEYWORDS; j++) {
-			  
-				switch ( true ) {
-				  
-					case ( run_arguments[i] == "INPUT_DIRECTORY" ):
-						LAMBDA = run_arguments[i+1];
-					case ( run_arguments[i] == "OUTPUT_DIRECTORY"):
-						OUTPUT_DIRECTORY
-					case ( run_arguments[i] == "INPUT_FOLDER"):
-						OUTPUT_DIRECTORY
-					case ( run_arguments[i] == "OUTPUT_FOLDER"):
-						OUTPUT_DIRECTORY
-					case ( run_arguments[i] == "MAX_GPU_HISTORIES"):
-						OUTPUT_DIRECTORY
-					case ( run_arguments[i] == "MAX_CUTS_HISTORIES"):
-						OUTPUT_DIRECTORY	
-					case ( run_arguments[i] == "LAMBDA"):
-						OUTPUT_DIRECTORY
-					case ( run_arguments[i] == "ITERATIONS"):
-						OUTPUT_DIRECTORY
-					case ( run_arguments[i] == "DROP_BLOCK_SIZE"):
-						OUTPUT_DIRECTORY
-					case ( run_arguments[i] == "THREADS_PER_BLOCK"):
-						OUTPUT_DIRECTORY
-					case ( run_arguments[i] == "ENDPOINTS_PER_BLOCK"):
-						OUTPUT_DIRECTORY
-					case ( run_arguments[i] == "ENDPOINTS_PER_THREAD"):
-						OUTPUT_DIRECTORY
-					case ( run_arguments[i] == "HISTORIES_PER_THREAD"):
-						OUTPUT_DIRECTORY
-					case ( run_arguments[i] == "VOXELS_PER_THREAD"):
-						OUTPUT_DIRECTORY
-					case ( run_arguments[i] == "MAX_ENDPOINTS_HISTORIES"):
-						OUTPUT_DIRECTORY
-				}		
-				
-			
-			
-			//}
-			
-		
-		}
-		  
-	
-	}*/
 	if(num_arguments == 4)
 	{
 	  
@@ -713,11 +687,11 @@ void command_line_settings( unsigned int num_arguments, char** arguments )
 	//		CONFIG_DIRECTORY = arguments[1];
 	//	case default: break;
 	//}
-	printf("LAMBDA = %3f\n", LAMBDA);
+	//printf("LAMBDA = %3f\n", LAMBDA);
 	
-	cout << "voxels to be scaled = " << num_voxel_scales << endl;
-	for( unsigned int i = 0; i < num_voxel_scales; i++ )
-		printf("voxel_scale[%d] = %3f\n", i, voxel_scales[i] );
+	//cout << "voxels to be scaled = " << num_voxel_scales << endl;
+	//for( unsigned int i = 0; i < num_voxel_scales; i++ )
+		//printf("voxel_scale[%d] = %3f\n", i, voxel_scales[i] );
 }
 /***********************************************************************************************************************************************************************************************************************/
 /************************************************************************* Read and set reconstruction configurations, settings, and parameters ************************************************************************/
@@ -1086,7 +1060,7 @@ void initial_processing_memory_clean()
 void resize_vectors( unsigned int new_size )
 {
 	bin_num_vector.resize( new_size );
-	gantry_angle_vector.resize( new_size );
+	//gantry_angle_vector.resize( new_size );
 	WEPL_vector.resize( new_size );
 	x_entry_vector.resize( new_size );	
 	y_entry_vector.resize( new_size );	
@@ -1118,7 +1092,7 @@ void shrink_vectors( unsigned int new_capacity )
 void data_shift_vectors( unsigned int read_index, unsigned int write_index )
 {
 	bin_num_vector[write_index] = bin_num_vector[read_index];
-	gantry_angle_vector[write_index]  = gantry_angle_vector[read_index];
+	//gantry_angle_vector[write_index]  = gantry_angle_vector[read_index];
 	WEPL_vector[write_index] = WEPL_vector[read_index];
 	x_entry_vector[write_index] = x_entry_vector[read_index];
 	y_entry_vector[write_index] = y_entry_vector[read_index];
@@ -1130,19 +1104,6 @@ void data_shift_vectors( unsigned int read_index, unsigned int write_index )
 	xz_entry_angle_vector[write_index] = xz_entry_angle_vector[read_index];
 	xy_exit_angle_vector[write_index] = xy_exit_angle_vector[read_index];
 	xz_exit_angle_vector[write_index] = xz_exit_angle_vector[read_index];
-	/*	gantry_angle_vector[reconstruction_histories] = gantry_angle_vector[ i + start_position ];
-	bin_num_vector[reconstruction_histories] = bin_num_vector[ i + start_position ];
-	WEPL_vector[reconstruction_histories] = WEPL_vector[ i + start_position ];
-	x_entry_vector[reconstruction_histories] = x_entry_vector[ i + start_position ];
-	y_entry_vector[reconstruction_histories] = y_entry_vector[ i + start_position ];
-	z_entry_vector[reconstruction_histories] = z_entry_vector[ i + start_position ];
-	x_exit_vector[reconstruction_histories] = x_exit_vector[ i + start_position ];
-	y_exit_vector[reconstruction_histories] = y_exit_vector[ i + start_position ];
-	z_exit_vector[reconstruction_histories] = z_exit_vector[ i + start_position ];
-	xy_entry_angle_vector[reconstruction_histories] = xy_entry_angle_vector[ i + start_position ];
-	xz_entry_angle_vector[reconstruction_histories] = xz_entry_angle_vector[ i + start_position ];
-	xy_exit_angle_vector[reconstruction_histories] = xy_exit_angle_vector[ i + start_position ];
-	xz_exit_angle_vector[reconstruction_histories] = xz_exit_angle_vector[ i + start_position ];*/
 }
 void initialize_stddev()
 {	
@@ -1161,38 +1122,6 @@ void initialize_stddev()
 	cudaMemcpy( stddev_rel_ut_angle_d,	stddev_rel_ut_angle_h,	SIZE_BINS_FLOAT,	cudaMemcpyHostToDevice );
 	cudaMemcpy( stddev_rel_uv_angle_d,	stddev_rel_uv_angle_h,	SIZE_BINS_FLOAT,	cudaMemcpyHostToDevice );
 	cudaMemcpy( stddev_WEPL_d,			stddev_WEPL_h,			SIZE_BINS_FLOAT,	cudaMemcpyHostToDevice );
-}
-void allocations( const unsigned int num_histories)
-{
-	bin_num				= (int*)   calloc( num_histories,	sizeof(int)   );		
-	gantry_angle		= (int*)   calloc( num_histories,	sizeof(int)   );
-	WEPL				= (float*) calloc( num_histories,	sizeof(float) );		
-	x_entry				= (float*) calloc( num_histories,	sizeof(float) );		
-	y_entry				= (float*) calloc( num_histories,	sizeof(float) );		
-	z_entry				= (float*) calloc( num_histories,	sizeof(float) );		
-	x_exit				= (float*) calloc( num_histories,	sizeof(float) );		
-	y_exit				= (float*) calloc( num_histories,	sizeof(float) );			
-	z_exit				= (float*) calloc( num_histories,	sizeof(float) );			
-	xy_entry_angle		= (float*) calloc( num_histories,	sizeof(float) );	
-	xz_entry_angle		= (float*) calloc( num_histories,	sizeof(float) );	
-	xy_exit_angle		= (float*) calloc( num_histories,	sizeof(float) );	
-	xz_exit_angle		= (float*) calloc( num_histories,	sizeof(float) );	
-}
-void reallocations( const unsigned int new_size)
-{
-	bin_num				= (int*)   realloc( bin_num,			new_size * sizeof(int)   );		
-	gantry_angle		= (int*)   realloc( gantry_angle,		new_size * sizeof(int)   );
-	WEPL				= (float*) realloc( WEPL,				new_size * sizeof(float) );		
-	x_entry				= (float*) realloc( x_entry,			new_size * sizeof(float) );		
-	y_entry				= (float*) realloc( y_entry,			new_size * sizeof(float) );		
-	z_entry				= (float*) realloc( z_entry,			new_size * sizeof(float) );		
-	x_exit				= (float*) realloc( x_exit,				new_size * sizeof(float) );		
-	y_exit				= (float*) realloc( y_exit,				new_size * sizeof(float) );			
-	z_exit				= (float*) realloc( z_exit,				new_size * sizeof(float) );			
-	xy_entry_angle		= (float*) realloc( xy_entry_angle,		new_size * sizeof(float) );	
-	xz_entry_angle		= (float*) realloc( xz_entry_angle,		new_size * sizeof(float) );	
-	xy_exit_angle		= (float*) realloc( xy_exit_angle,		new_size * sizeof(float) );	
-	xz_exit_angle		= (float*) realloc( xz_exit_angle,		new_size * sizeof(float) );	
 }
 void post_cut_memory_clean()
 {
@@ -1911,14 +1840,14 @@ void apply_tuv_shifts( unsigned int num_histories)
 	if( WRITE_SSD_ANGLES )
 	{
 		char data_filename[256];
-		sprintf(data_filename, "%s_%03d%s", "ut_entry_angle", gantry_angle, ".txt" );
+		sprintf(data_filename, "%s_%03d%s", "ut_entry_angle", gantry_angle_h[0], ".txt" );
 		array_2_disk( data_filename, OUTPUT_DIRECTORY, OUTPUT_FOLDER, ut_entry_angle, COLUMNS, ROWS, SLICES, num_histories, true );
-		sprintf(data_filename, "%s_%03d%s", "uv_entry_angle", gantry_angle, ".txt" );
+		sprintf(data_filename, "%s_%03d%s", "uv_entry_angle", gantry_angle_h[0], ".txt" );
 		char ut_entry_angle[] = {"ut_entry_angle"};
 		array_2_disk( ut_entry_angle, OUTPUT_DIRECTORY, OUTPUT_FOLDER, uv_entry_angle, COLUMNS, ROWS, SLICES, num_histories, true );
-		sprintf(data_filename, "%s_%03d%s", "ut_exit_angle", gantry_angle, ".txt" );
+		sprintf(data_filename, "%s_%03d%s", "ut_exit_angle", gantry_angle_h[0], ".txt" );
 		array_2_disk( ut_entry_angle, OUTPUT_DIRECTORY, OUTPUT_FOLDER, ut_exit_angle, COLUMNS, ROWS, SLICES, num_histories, true );
-		sprintf(data_filename, "%s_%03d%s", "uv_exit_angle", gantry_angle, ".txt" );
+		sprintf(data_filename, "%s_%03d%s", "uv_exit_angle", gantry_angle_h[0], ".txt" );
 		array_2_disk( ut_entry_angle, OUTPUT_DIRECTORY, OUTPUT_FOLDER, uv_exit_angle, COLUMNS, ROWS, SLICES, num_histories, true );
 	}
 }
@@ -1957,7 +1886,7 @@ void read_data_chunk( const int num_histories, const int start_file_num, const i
 	switch( DATA_FORMAT )
 	{
 		case OLD_FORMAT : read_data_chunk_old( num_histories, start_file_num, end_file_num - 1 );	break;
-		case VERSION_0  : read_data_chunk_v02(  num_histories, start_file_num, end_file_num - 1 );	break;
+		case VERSION_0  : read_data_chunk_v0(  num_histories, start_file_num, end_file_num - 1 );	break;
 		case VERSION_1  : read_data_chunk_v1(  num_histories, start_file_num, end_file_num - 1 );
 	}
 }
@@ -2243,10 +2172,10 @@ void read_data_chunk_v02( const int num_histories, const int start_file_num, con
 			data_file.read((char*)&u_out_2_h[histories_read], data_size);
 			data_file.read((char*)&WEPL_h[histories_read], data_size);
 	
-			double max_v = 0;
-			double min_v = 0;
-			double max_WEPL = 0;
-			double min_WEPL = 0;
+			//double max_v = 0;
+			//double min_v = 0;
+			//double max_WEPL = 0;
+			//double min_WEPL = 0;
 			//float v_data[4], t_data[4], WEPL_data, gantry_angle_data, dummy_data;
 			for( unsigned int i = 0; i < file_histories; i++, array_index++ ) 
 			{
@@ -2268,7 +2197,7 @@ void read_data_chunk_v02( const int num_histories, const int start_file_num, con
 					u_in_2_h[array_index]		*= MM_TO_CM;
 					u_out_1_h[array_index]	*= MM_TO_CM;
 					u_out_2_h[array_index]	*= MM_TO_CM;
-					if( (v_in_1_h[array_index]) > max_v )
+					/*if( (v_in_1_h[array_index]) > max_v )
 						max_v = v_in_1_h[array_index];
 					if( (v_in_2_h[array_index]) > max_v )
 						max_v = v_in_2_h[array_index];
@@ -2289,14 +2218,16 @@ void read_data_chunk_v02( const int num_histories, const int start_file_num, con
 					if( (WEPL_h[array_index]) > max_WEPL )
 						max_WEPL = WEPL_h[array_index];
 					if( (WEPL_h[array_index]) < min_WEPL )
-						min_WEPL = WEPL_h[array_index];
+						min_WEPL = WEPL_h[array_index];*/
 				}
-				gantry_angle_h[array_index] = (int(projection_angle) + 270)%360;
+				gantry_angle_h[array_index] = static_cast<int>(projection_angle);
+				//gantry_angle_h[array_index] = (int(projection_angle) + 270)%360;
+
 			}
 			//printf("max_v = %3f\n", max_v );
 			//printf("min_v = %3f\n", min_v );
-			printf("max_WEPL = %3f\n", max_WEPL );
-			printf("min_WEPL = %3f\n", min_WEPL );
+			//printf("max_WEPL = %3f\n", max_WEPL );
+			//printf("min_WEPL = %3f\n", min_WEPL );
 			data_file.close();
 			histories_read += file_histories;
 		}
@@ -2831,19 +2762,6 @@ void binning( const int num_histories )
 			xz_entry_angle_vector.push_back( xz_entry_angle_h[i] );
 			xy_exit_angle_vector.push_back( xy_exit_angle_h[i] );
 			xz_exit_angle_vector.push_back( xz_exit_angle_h[i] );
-			//bin_num[recon_vol_histories]			= bin_num[i];			
-			//gantry_angle[recon_vol_histories]		= gantry_angle[i];	
-			//WEPL[recon_vol_histories]				= WEPL[i]; 		
-			//x_entry[recon_vol_histories]			= x_entry[i];		
-			//y_entry[recon_vol_histories]			= y_entry[i];		
-			//z_entry[recon_vol_histories]			= z_entry[i];		
-			//x_exit[recon_vol_histories]				= x_exit[i];			
-			//y_exit[recon_vol_histories]				= y_exit[i];			
-			//z_exit[recon_vol_histories]				= z_exit[i];			
-			//xy_entry_angle[recon_vol_histories]		= xy_entry_angle[i];	
-			//xz_entry_angle[recon_vol_histories]		= xz_entry_angle[i];	
-			//xy_exit_angle[recon_vol_histories]		= xy_exit_angle[i]; 	
-			//xz_exit_angle[recon_vol_histories]		= xz_exit_angle[i];	
 			offset++;
 			recon_vol_histories++;
 		}
@@ -3023,14 +2941,6 @@ void sum_squared_deviations( const int start_position, const int num_histories )
 	cudaMemcpy( xy_exit_angle_d,		&xy_exit_angle_vector[start_position],		size_floats, cudaMemcpyHostToDevice);
 	cudaMemcpy( xz_exit_angle_d,		&xz_exit_angle_vector[start_position],		size_floats, cudaMemcpyHostToDevice);
 
-
-	//cudaMemcpy( bin_num_d,				&bin_num[start_position],			size_ints, cudaMemcpyHostToDevice);
-	//cudaMemcpy( WEPL_d,					&WEPL[start_position],				size_floats, cudaMemcpyHostToDevice);
-	//cudaMemcpy( xy_entry_angle_d,		&xy_entry_angle[start_position],		size_floats, cudaMemcpyHostToDevice);
-	//cudaMemcpy( xz_entry_angle_d,		&xz_entry_angle[start_position],		size_floats, cudaMemcpyHostToDevice);
-	//cudaMemcpy( xy_exit_angle_d,		&xy_exit_angle[start_position],		size_floats, cudaMemcpyHostToDevice);
-	//cudaMemcpy( xz_exit_angle_d,		&xz_exit_angle[start_position],		size_floats, cudaMemcpyHostToDevice);
-
 	dim3 dimBlock(THREADS_PER_BLOCK);
 	dim3 dimGrid((int)(num_histories/THREADS_PER_BLOCK)+1);
 	sum_squared_deviations_GPU<<<dimGrid, dimBlock>>>
@@ -3097,7 +3007,6 @@ void calculate_standard_deviations()
 	array_2_disk(stddev_wepl, OUTPUT_DIRECTORY, OUTPUT_FOLDER, stddev_WEPL_h, T_BINS, ANGULAR_BINS, V_BINS, NUM_BINS, true );
 	//cudaFree( bin_counts_d );
 }
-
 __global__ void calculate_standard_deviations_GPU( int* bin_counts, float* stddev_WEPL, float* stddev_rel_ut_angle, float* stddev_rel_uv_angle )
 {
 	int v = blockIdx.x, angle = blockIdx.y, t = threadIdx.x;
@@ -3174,19 +3083,6 @@ void statistical_cuts( const int start_position, const int num_histories )
 			xz_entry_angle_vector[post_cut_histories] = xz_entry_angle_vector[start_position + i];
 			xy_exit_angle_vector[post_cut_histories] = xy_exit_angle_vector[start_position + i];
 			xz_exit_angle_vector[post_cut_histories] = xz_exit_angle_vector[start_position + i];
-			//bin_num[post_cut_histories] = bin_num[start_position + i];
-			////gantry_angle[post_cut_histories] = gantry_angle[start_position + i];
-			//WEPL[post_cut_histories] = WEPL[start_position + i];
-			//x_entry[post_cut_histories] = x_entry[start_position + i];
-			//y_entry[post_cut_histories] = y_entry[start_position + i];
-			//z_entry[post_cut_histories] = z_entry[start_position + i];
-			//x_exit[post_cut_histories] = x_exit[start_position + i];
-			//y_exit[post_cut_histories] = y_exit[start_position + i];
-			//z_exit[post_cut_histories] = z_exit[start_position + i];
-			//xy_entry_angle[post_cut_histories] = xy_entry_angle[start_position + i];
-			//xz_entry_angle[post_cut_histories] = xz_entry_angle[start_position + i];
-			//xy_exit_angle[post_cut_histories] = xy_exit_angle[start_position + i];
-			//xz_exit_angle[post_cut_histories] = xz_exit_angle[start_position + i];
 			post_cut_histories++;
 		}
 	}
@@ -3734,7 +3630,7 @@ __global__ void SC_GPU
 )
 {// 15 doubles, 11 integers, 2 booleans
 	int i = threadIdx.x + blockIdx.x * THREADS_PER_BLOCK;
-	if( (i < num_histories) && !missed_recon_volume[i] && (WEPL[i] <= SC_THRESHOLD) )
+	if( (i < num_histories) && !missed_recon_volume[i] && (WEPL[i] <= SC_UPPER_THRESHOLD) && (WEPL[i] >= SC_LOWER_THRESHOLD) )
 	{
 		/********************************************************************************************/
 		/************************** Path Characteristic Parameters **********************************/
@@ -3852,7 +3748,7 @@ __global__ void MSC_GPU
 )
 {
 	int i = threadIdx.x + blockIdx.x * THREADS_PER_BLOCK;
-	if( (i < num_histories) && !missed_recon_volume[i] && (WEPL[i] <= MSC_THRESHOLD) )
+	if( (i < num_histories) && !missed_recon_volume[i] && (WEPL[i] <= MSC_UPPER_THRESHOLD) && (WEPL[i] >= MSC_LOWER_THRESHOLD) )
 	{
 		/********************************************************************************************/
 		/************************** Path Characteristic Parameters **********************************/
@@ -3946,7 +3842,7 @@ __global__ void MSC_GPU
 					atomicAdd(&MSC_counts[voxel], 1);
 			}// end: while( !end_walk )
 		}//end: else: z_start != z_end => z_start == z_end
-	}// end: if( (i < num_histories) && !missed_recon_volume[i] && (WEPL[i] <= MSC_THRESHOLD) )
+	}// end: if( (i < num_histories) && !missed_recon_volume[i] && (WEPL[i] <= MSC_UPPER_THRESHOLD) )
 }
 void MSC_edge_detection()
 {
@@ -3954,8 +3850,17 @@ void MSC_edge_detection()
 
 	dim3 dimBlock( SLICES );
 	dim3 dimGrid( COLUMNS, ROWS );   
+	//int* MSC_counts_output_d;
+	//cudaMalloc((void**) &MSC_counts_output_d, NUM_VOXELS * sizeof(int) );
+	//cudaMemcpy(MSC_counts_output_d,  MSC_counts_h, SIZE_IMAGE_INT, cudaMemcpyHostToDevice);
+		
 	MSC_edge_detection_GPU<<< dimGrid, dimBlock >>>( MSC_counts_d );
-
+	//MSC_edge_detection_GPU<<< dimGrid, dimBlock >>>( MSC_counts_d, MSC_counts_output_d );
+	
+	//cudaMemcpy(MSC_counts_h,  MSC_counts_output_d, SIZE_IMAGE_INT, cudaMemcpyDeviceToHost);
+	//cudaFree(MSC_counts_d);
+	//MSC_counts_d = MSC_counts_output_d;
+	//cudaFree(MSC_counts_output_d);
 	puts("MSC hull-detection and edge-detection complete.");	
 }
 __global__ void MSC_edge_detection_GPU( int* MSC_counts )
@@ -3978,14 +3883,40 @@ __global__ void MSC_edge_detection_GPU( int* MSC_counts )
 		}
 	}
 	__syncthreads();
-	
-	if( max_difference>MSC_DIFF_THRESH || MSC_counts[voxel]>MSC_DIFF_THRESH )
+	if( max_difference > MSC_DIFF_THRESH || MSC_counts[voxel] > MSC_DIFF_THRESH)
 		MSC_counts[voxel] = 0;
-
 	else
 		MSC_counts[voxel] = 1;
-	if( pow((double)x, 2.0) + pow((double)y, 2.0) >= pow((double)RECON_CYL_RADIUS - (double) max(VOXEL_WIDTH, VOXEL_HEIGHT)/2.0, 2.0 ) )
+	if( pow(x, 2) + pow(y, 2) >= pow(RECON_CYL_RADIUS - max(VOXEL_WIDTH, VOXEL_HEIGHT)/2, 2 ) )
 		MSC_counts[voxel] = 0;
+
+}
+__global__ void MSC_edge_detection_GPU( int* MSC_counts, int* MSC_counts_output )
+{
+	int row = blockIdx.y, column = blockIdx.x, slice = threadIdx.x;
+	int voxel = column + row * COLUMNS + slice * COLUMNS * ROWS;
+	float x = ( column - COLUMNS/2 + 0.5 ) * VOXEL_WIDTH;
+	float y = ( ROWS/2 - row - 0.5 ) * VOXEL_HEIGHT;
+	int difference, max_difference = 0;
+	if( (row != 0) && (row != ROWS - 1) && (column != 0) && (column != COLUMNS - 1) )
+	{		
+		for( int current_row = row - 1; current_row <= row + 1; current_row++ )
+		{
+			for( int current_column = column - 1; current_column <= column + 1; current_column++ )
+			{
+				difference = MSC_counts[voxel] - MSC_counts[current_column + current_row * COLUMNS + slice * COLUMNS * ROWS];
+				if( difference > max_difference )
+					max_difference = difference;
+			}
+		}
+	}
+	__syncthreads();
+	if( max_difference > MSC_DIFF_THRESH )
+		MSC_counts_output[voxel] = 0;
+	else
+		MSC_counts_output[voxel] = 1;
+	if( pow(x, 2) + pow(y, 2) >= pow(RECON_CYL_RADIUS - max(VOXEL_WIDTH, VOXEL_HEIGHT)/2, 2 ) )
+		MSC_counts_output[voxel] = 0;
 
 }
 /***********************************************************************************************************************************************************************************************************************/
@@ -4100,7 +4031,7 @@ __global__ void SM_GPU
 					atomicAdd(&SM_counts[voxel], 1);
 			}// end: while( !end_walk )
 		}//end: else: z_start != z_end => z_start == z_end
-	}// end: if( (i < num_histories) && !missed_recon_volume[i] && (WEPL[i] <= MSC_THRESHOLD) )
+	}// end: if( (i < num_histories) && !missed_recon_volume[i] && (WEPL[i] <= MSC_UPPER_THRESHOLD) )
 }
 void SM_edge_detection()
 {
@@ -4287,6 +4218,8 @@ __global__ void SM_edge_detection_GPU_2( int* SM_counts, int* SM_differences )
 }
 void hull_detection_finish()
 {
+	char statement[] = {"Finishing hull detection and writing resulting images to disk..."};
+	print_section_exit( statement, SECTION_EXIT_STRING );
 	if( SC_ON )
 	{
 		SC_hull_h = (bool*) calloc( NUM_VOXELS, sizeof(bool) );
@@ -4352,6 +4285,16 @@ void hull_detection_finish()
 			free( SM_counts_h );
 	}
 }
+void hull_conversion_int_2_bool( int* int_hull )
+{
+	for( int voxel = 0; voxel < NUM_VOXELS; voxel++ )
+	{
+		if( int_hull[voxel] == 1 )
+			hull_h[voxel] = true;
+		else
+			hull_h[voxel] = false;
+	}
+}
 void hull_selection()
 {
 	puts("Performing hull selection...");
@@ -4359,15 +4302,11 @@ void hull_selection()
 	hull_h = (bool*) calloc( NUM_VOXELS, sizeof(bool) );
 	switch( MLP_HULL )
 	{
-		case SC_HULL  : hull_h = SC_hull_h;																							break;
-		case MSC_HULL : for (int i = 0 ; i < NUM_VOXELS; i++) 
-					{
-					  if( MSC_counts_h[i] == 1 ) 
-						hull_h[i] = true;
-					  else 
-						hull_h[i] = false;} 
-						break;//std::transform( MSC_counts_h, MSC_counts_h + NUM_VOXELS, MSC_counts_h, hull_h, std::logical_or<int> () );		break;
-		case SM_HULL  : std::transform( SM_counts_h,  SM_counts_h + NUM_VOXELS,  SM_counts_h,  hull_h, std::logical_or<int> () );		break;
+		case SC_HULL  : hull_h = SC_hull_h;																									break;
+		case MSC_HULL : hull_conversion_int_2_bool( MSC_counts_h );																			break;
+						// std::transform( MSC_counts_h, MSC_counts_h + NUM_VOXELS, MSC_counts_h, hull_h, std::multiplies<int> () );		break;
+		case SM_HULL  : hull_conversion_int_2_bool( SM_counts_h );																			break;
+						// std::transform( SM_counts_h,  SM_counts_h + NUM_VOXELS,  SM_counts_h,  hull_h, std::multiplies<int> () );		break;
 		case FBP_HULL : hull_h = FBP_hull_h;								
 	}
 	if( WRITE_X_HULL )
@@ -4550,17 +4489,6 @@ template<typename T, typename T2> __global__ void apply_averaging_filter_GPU( T*
 }
 /****************************************************************************************************** MLP (host) *****************************************************************************************************/
 /***********************************************************************************************************************************************************************************************************************/
-void create_MLP_test_image()
-{	
-	//Create space carve object, init to zeros
-	MLP_test_image_h = (int*)calloc( MLP_IMAGE_VOXELS, sizeof(int));
-
-	for( int slice = 0; slice < MLP_IMAGE_SLICES; slice++ )
-	{
-		//add_circle( MLP_test_image_h, slice, 0.0, 0.0, MLP_IMAGE_RECON_CYL_RADIUS, 1 );
-		add_ellipse( MLP_test_image_h, slice, 0.0, 0.0, MLP_PHANTOM_A, MLP_PHANTOM_B, 1 );
-	}
-}
 template<typename O> bool find_MLP_endpoints
 ( 
 	O*& image, double x_start, double y_start, double z_start, double xy_angle, double xz_angle, 
@@ -5198,8 +5126,6 @@ template<typename O> __device__ bool find_MLP_endpoints_GPU
 	double& x_object, double& y_object, double& z_object, int& voxel_x, int& voxel_y, int& voxel_z, bool entering
 )
 {
-	//char user_response[20];
-
 	/********************************************************************************************/
 	/********************************* Voxel Walk Parameters ************************************/
 	/********************************************************************************************/
@@ -5211,13 +5137,8 @@ template<typename O> __device__ bool find_MLP_endpoints_GPU
 	double x = x_start, y = y_start, z = z_start;
 	double x_to_go, y_to_go, z_to_go;		
 	double x_extension, y_extension;	
-	//int voxel_x, voxel_y, voxel_z;
-	//int voxel_x_out, voxel_y_out, voxel_z_out; 
 	int voxel; 
 	bool hit_hull = false, end_walk, outside_image;
-	// true false
-	//bool debug_run = false;
-	//bool MLP_image_output = false;
 	/********************************************************************************************/
 	/******************** Initial Conditions and Movement Characteristics ***********************/
 	/********************************************************************************************/	
@@ -5229,18 +5150,8 @@ template<typename O> __device__ bool find_MLP_endpoints_GPU
 	y_move_direction = ( sin(xy_angle) >= 0 ) - ( sin(xy_angle) <= 0 );
 	z_move_direction = ( sin(xz_angle) >= 0 ) - ( sin(xz_angle) <= 0 );
 	if( x_move_direction < 0 )
-	{
-		//if( debug_run )
-			//puts("z switched");
 		z_move_direction *= -1;
-	}
-	/*if( debug_run )
-	{
-		cout << "x_move_direction = " << x_move_direction << endl;
-		cout << "y_move_direction = " << y_move_direction << endl;
-		cout << "z_move_direction = " << z_move_direction << endl;
-	}*/
-		
+
 	voxel_x = calculate_voxel_GPU( X_ZERO_COORDINATE, x, VOXEL_WIDTH );
 	voxel_y = calculate_voxel_GPU( Y_ZERO_COORDINATE, y, VOXEL_HEIGHT );
 	voxel_z = calculate_voxel_GPU( Z_ZERO_COORDINATE, z, VOXEL_THICKNESS );
@@ -5262,56 +5173,27 @@ template<typename O> __device__ bool find_MLP_endpoints_GPU
 	double dz_dx = tan(xz_angle);
 	double dz_dy = tan(xz_angle)/tan(xy_angle);
 
-	double dx_dy = pow( tan(xy_angle), -1.0 );
-	double dx_dz = pow( tan(xz_angle), -1.0 );
-	double dy_dz = tan(xy_angle)/tan(xz_angle);
-
-	//if( debug_run )
-	//{
-	//	cout << "delta_yx = " << delta_yx << "delta_zx = " << delta_zx << "delta_zy = " << delta_zy << endl;
-	//	cout << "dy_dx = " << dy_dx << "dz_dx = " << dz_dx << "dz_dy = " << dz_dy << endl;
-	//	cout << "dx_dy = " << dx_dy << "dx_dz = " << dx_dz << "dy_dz = " << dy_dz << endl;
-	//}
-
+	double dx_dy = powf( tan(xy_angle), -1.0 );
+	double dx_dz = powf( tan(xz_angle), -1.0 );
+	double dy_dz = tanf(xy_angle)/tan(xz_angle);
 	/********************************************************************************************/
 	/************************* Initialize and Check Exit Conditions *****************************/
 	/********************************************************************************************/
 	outside_image = (voxel_x >= COLUMNS ) || (voxel_y >= ROWS ) || (voxel_z >= SLICES ) || (voxel_x < 0  ) || (voxel_y < 0 ) || (voxel_z < 0 );		
 	if( !outside_image )
-	{
 		hit_hull = (image[voxel] == 1);		
-		//image[voxel] = 4;
-	}
 	end_walk = outside_image || hit_hull;
-	//int j = 0;
-	//int j_low_limit = 0;
-	//int j_high_limit = 250;
-	/*if(debug_run && j <= j_high_limit && j >= j_low_limit )
-	{
-		printf(" x = %3f y = %3f z = %3f\n",  x, y, z );
-		printf(" x_to_go = %3f y_to_go = %3f z_to_go = %3f\n",  x_to_go, y_to_go, z_to_go );
-		printf("voxel_x = %d voxel_y = %d voxel_z = %d voxel = %d\n", voxel_x, voxel_y, voxel_z, voxel);
-	}*/
-	//if( debug_run )
-		//fgets(user_response, sizeof(user_response), stdin);
 	/********************************************************************************************/
 	/*********************************** Voxel Walk Routine *************************************/
 	/********************************************************************************************/
 	if( z_move_direction != 0 )
 	{
-		//if(debug_run && j <= j_high_limit && j >= j_low_limit )
-			//printf("z_end != z_start\n");
+		//printf("z_end != z_start\n");
 		while( !end_walk )
 		{
 			// Change in z for Move to Voxel Edge in x and y
 			x_extension = delta_zx * x_to_go;
 			y_extension = delta_zy * y_to_go;
-			//if(debug_run && j <= j_high_limit && j >= j_low_limit )
-			//{
-			//	printf(" x_extension = %3f y_extension = %3f\n", x_extension, y_extension );
-			//	//printf(" x_to_go = %3f y_to_go = %3f z_to_go = %3f\n",  x_to_go, y_to_go, z_to_go );
-			//	//printf("voxel_x = %d voxel_y = %d voxel_z = %d voxel = %d\n", voxel_x, voxel_y, voxel_z, voxel);
-			//}
 			if( (z_to_go <= x_extension  ) && (z_to_go <= y_extension) )
 			{
 				//printf("z_to_go <= x_extension && z_to_go <= y_extension\n");					
@@ -5320,13 +5202,6 @@ template<typename O> __device__ bool find_MLP_endpoints_GPU
 				z = edge_coordinate_GPU( Z_ZERO_COORDINATE, voxel_z, VOXEL_THICKNESS, Z_INCREASING_DIRECTION, z_move_direction );					
 				x = corresponding_coordinate_GPU( dx_dz, z, z_start, x_start );
 				y = corresponding_coordinate_GPU( dy_dz, z, z_start, y_start );
-
-				/*if(debug_run && j <= j_high_limit && j >= j_low_limit )
-				{
-					printf(" x = %3f y = %3f z = %3f\n",  x, y, z );
-					printf(" x_to_go = %3f y_to_go = %3f z_to_go = %3f\n",  x_to_go, y_to_go, z_to_go );
-					printf("voxel_x = %d voxel_y = %d voxel_z = %d voxel = %d\n", voxel_x, voxel_y, voxel_z, voxel);
-				}*/
 
 				x_to_go = distance_remaining_GPU( X_ZERO_COORDINATE, x, X_INCREASING_DIRECTION, x_move_direction, VOXEL_WIDTH, voxel_x );
 				y_to_go = distance_remaining_GPU( Y_ZERO_COORDINATE, y, Y_INCREASING_DIRECTION, y_move_direction, VOXEL_HEIGHT, voxel_y );	
@@ -5379,31 +5254,16 @@ template<typename O> __device__ bool find_MLP_endpoints_GPU
 				
 			voxel_z = max(voxel_z, 0 );
 			voxel = voxel_x + voxel_y * COLUMNS + voxel_z * COLUMNS * ROWS;
-			//if(debug_run && j <= j_high_limit && j >= j_low_limit )
-			//{
-			//	printf(" x = %3f y = %3f z = %3f\n",  x, y, z );
-			//	printf(" x_to_go = %3f y_to_go = %3f z_to_go = %3f\n",  x_to_go, y_to_go, z_to_go );
-			//	printf("voxel_x = %d voxel_y = %d voxel_z = %d voxel = %d\n", voxel_x, voxel_y, voxel_z, voxel);
-			//}
+
 			outside_image = (voxel_x >= COLUMNS ) || (voxel_y >= ROWS ) || (voxel_z >= SLICES ) || (voxel_x < 0  ) || (voxel_y < 0 ) || (voxel_z < 0 );		
 			if( !outside_image )
-			{
 				hit_hull = (image[voxel] == 1);	
-				//if( MLP_image_output )
-				//{
-					//image[voxel] = 4;
-				//}
-			}
-			end_walk = outside_image || hit_hull;
-			//j++;
-			//if( debug_run )
-				//fgets(user_response, sizeof(user_response), stdin);		
+			end_walk = outside_image || hit_hull;	
 		}// end !end_walk 
 	}
 	else
 	{
-		//if(debug_run && j <= j_high_limit && j >= j_low_limit )
-			//printf("z_end == z_start\n");
+		//printf("z_end == z_start\n");
 		while( !end_walk )
 		{
 			// Change in x for Move to Voxel Edge in y
@@ -5444,27 +5304,11 @@ template<typename O> __device__ bool find_MLP_endpoints_GPU
 				voxel_y -= y_move_direction;
 			}
 			voxel = voxel_x + voxel_y * COLUMNS + voxel_z * COLUMNS * ROWS;		
-			/*if(debug_run && j <= j_high_limit && j >= j_low_limit )
-			{
-				printf(" x = %3f y = %3f z = %3f\n",  x, y, z );
-				printf(" x_to_go = %3f y_to_go = %3f z_to_go = %3f\n",  x_to_go, y_to_go, z_to_go );
-				printf("voxel_x_in = %d voxel_y_in = %d voxel_z_in = %d\n", voxel_x, voxel_y, voxel_z);
-			}*/
 			outside_image = (voxel_x >= COLUMNS ) || (voxel_y >= ROWS ) || (voxel_z >= SLICES ) || (voxel_x < 0  ) || (voxel_y < 0 ) || (voxel_z < 0 );		
 			if( !outside_image )
-			{
 				hit_hull = (image[voxel] == 1);		
-				//if( MLP_image_output )
-				//{
-					//image[voxel] = 4;
-				//}
-			}
-			end_walk = outside_image || hit_hull;
-			//j++;
-			//if( debug_run )
-				//fgets(user_response, sizeof(user_response), stdin);		
+			end_walk = outside_image || hit_hull;	
 		}// end: while( !end_walk )
-		//printf("i = %d", i );
 	}//end: else: z_start != z_end => z_start == z_end
 	if( hit_hull )
 	{
@@ -5484,41 +5328,37 @@ __global__ void collect_MLP_endpoints_GPU
 	bool entered_object = false, exited_object = false;
 	int voxel_x = 0, voxel_y = 0, voxel_z = 0, voxel_x_int = 0, voxel_y_int = 0, voxel_z_int = 0;
 	double x_in_object = 0.0, y_in_object = 0.0, z_in_object = 0.0, x_out_object = 0.0, y_out_object = 0.0, z_out_object = 0.0;
-	
-	
-	//int proton_id = start_proton_id + threadIdx.x + blockIdx.x * blockDim.x;
-	//int proton_id = start_proton_id + threadIdx.x * ENDPOINTS_PER_THREAD + blockIdx.x * ENDPOINTS_PER_BLOCK;
-	int proton_id = start_proton_id + threadIdx.x * ENDPOINTS_PER_THREAD + blockIdx.x * ENDPOINTS_PER_BLOCK* ENDPOINTS_PER_THREAD;
-	
-	for( int history = 0; history < ENDPOINTS_PER_THREAD; history++)
-	{
-		if( proton_id < num_histories ) 
-		{
-	
-			intersected_hull[proton_id] = false;
-			first_MLP_voxel[proton_id] = 0;
-			entered_object = find_MLP_endpoints_GPU( hull, x_entry[proton_id], y_entry[proton_id], z_entry[proton_id], xy_entry_angle[proton_id], xz_entry_angle[proton_id], x_in_object, y_in_object, z_in_object, voxel_x, voxel_y, voxel_z, true);	
-			exited_object = find_MLP_endpoints_GPU( hull, x_exit[proton_id], y_exit[proton_id], z_exit[proton_id], xy_exit_angle[proton_id], xz_exit_angle[proton_id], x_out_object, y_out_object, z_out_object, voxel_x_int, voxel_y_int, voxel_z_int, false);
-		
-		
-			if( entered_object && exited_object ) 
-			{
-		  
-				intersected_hull[proton_id] = true;
-				first_MLP_voxel[proton_id] = voxel_x + COLUMNS * voxel_y + ROWS * COLUMNS * voxel_z;
-				x_entry[proton_id] = x_in_object;
-				y_entry[proton_id] = y_in_object;
-				z_entry[proton_id] = z_in_object;
-				x_exit[proton_id] = x_out_object;
-				y_exit[proton_id] = y_out_object;
-				z_exit[proton_id] = z_out_object;
-			}
-		
-	  
-		}
-		proton_id++;
-	}
 
+	int proton_id = start_proton_id + threadIdx.x * ENDPOINTS_PER_THREAD + blockIdx.x * ENDPOINTS_PER_BLOCK* ENDPOINTS_PER_THREAD;
+	if( proton_id < num_histories ) 
+	{
+		for( int history = 0; history < ENDPOINTS_PER_THREAD; history++)
+		{
+			if( proton_id < num_histories ) 
+			{
+	
+				intersected_hull[proton_id] = false;
+				first_MLP_voxel[proton_id] = NUM_VOXELS + 1;
+				exited_object = find_MLP_endpoints_GPU( hull, x_exit[proton_id], y_exit[proton_id], z_exit[proton_id], xy_exit_angle[proton_id], xz_exit_angle[proton_id], x_out_object, y_out_object, z_out_object, voxel_x_int, voxel_y_int, voxel_z_int, false);
+				entered_object = find_MLP_endpoints_GPU( hull, x_entry[proton_id], y_entry[proton_id], z_entry[proton_id], xy_entry_angle[proton_id], xz_entry_angle[proton_id], x_in_object, y_in_object, z_in_object, voxel_x, voxel_y, voxel_z, true);	
+				
+				//__syncthreads();
+				if( entered_object && exited_object ) 
+				{
+		  
+					intersected_hull[proton_id] = true;
+					first_MLP_voxel[proton_id] = voxel_x + COLUMNS * voxel_y + ROWS * COLUMNS * voxel_z;
+					x_entry[proton_id] = x_in_object;
+					y_entry[proton_id] = y_in_object;
+					z_entry[proton_id] = z_in_object;
+					x_exit[proton_id] = x_out_object;
+					y_exit[proton_id] = y_out_object;
+					z_exit[proton_id] = z_out_object;
+				}	  
+			}
+			proton_id++;
+		}
+	}
 }
 __global__ void collect_MLP_endpoints_GPU_nobool
 (
@@ -5530,6 +5370,7 @@ __global__ void collect_MLP_endpoints_GPU_nobool
 	bool entered_object = false, exited_object = false;
 	int voxel_x = 0, voxel_y = 0, voxel_z = 0, voxel_x_int = 0, voxel_y_int = 0, voxel_z_int = 0;
 	double x_in_object = 0.0, y_in_object = 0.0, z_in_object = 0.0, x_out_object = 0.0, y_out_object = 0.0, z_out_object = 0.0;
+	//float x_in_object = 0.0, y_in_object = 0.0, z_in_object = 0.0, x_out_object = 0.0, y_out_object = 0.0, z_out_object = 0.0;
 	
 	
 	//int proton_id = start_proton_id + threadIdx.x + blockIdx.x * blockDim.x;
@@ -5542,7 +5383,7 @@ __global__ void collect_MLP_endpoints_GPU_nobool
 		{
 	
 			//intersected_hull[proton_id] = false;
-			first_MLP_voxel[proton_id] = 0;
+			//first_MLP_voxel[proton_id] = NUM_VOXELS + 1;
 			entered_object = find_MLP_endpoints_GPU( hull, x_entry[proton_id], y_entry[proton_id], z_entry[proton_id], xy_entry_angle[proton_id], xz_entry_angle[proton_id], x_in_object, y_in_object, z_in_object, voxel_x, voxel_y, voxel_z, true);	
 			exited_object = find_MLP_endpoints_GPU( hull, x_exit[proton_id], y_exit[proton_id], z_exit[proton_id], xy_exit_angle[proton_id], xz_exit_angle[proton_id], x_out_object, y_out_object, z_out_object, voxel_x_int, voxel_y_int, voxel_z_int, false);
 		
@@ -5560,7 +5401,7 @@ __global__ void collect_MLP_endpoints_GPU_nobool
 				z_exit[proton_id] = z_out_object;
 			}
 			else
-				first_MLP_voxel[proton_id] = NUM_VOXELS + 1;
+				first_MLP_voxel[proton_id] = NUM_VOXELS;
 		
 	  
 		}
@@ -5571,19 +5412,18 @@ __global__ void collect_MLP_endpoints_GPU_nobool
 void reconstruction_cuts_hull_transfer()
 {
 	cudaFree(hull_d);
-	cudaMemcpy( hull_d, hull_h, NUM_VOXELS *sizeof(bool),cudaMemcpyHostToDevice );
 	cudaMalloc( (void**) &hull_d, NUM_VOXELS *sizeof(bool));	
+	cudaMemcpy( hull_d, hull_h, NUM_VOXELS *sizeof(bool),cudaMemcpyHostToDevice );
 }
 // ENDPOINTS_ALG = BOOL
 void reconstruction_cuts_allocations( const int num_histories)
 {
 	unsigned int size_floats		= sizeof(float) * num_histories;
 	unsigned int size_ints			= sizeof(int) * num_histories;
-	unsigned int size_bool			= sizeof(bool) * MAX_ENDPOINTS_HISTORIES;
+	unsigned int size_bool			= sizeof(bool) * num_histories;
 
-	intersected_hull_h = (bool*)calloc( MAX_ENDPOINTS_HISTORIES, sizeof(bool) );
-
-	puts("GPU memory allocation...");	
+	intersected_hull_h = (bool*)calloc( num_histories, sizeof(bool) );
+	
 	cudaMalloc( (void**) &x_entry_d,			size_floats );
 	cudaMalloc( (void**) &y_entry_d,			size_floats );
 	cudaMalloc( (void**) &z_entry_d,			size_floats );
@@ -5596,25 +5436,36 @@ void reconstruction_cuts_allocations( const int num_histories)
 	cudaMalloc( (void**) &xz_exit_angle_d,			size_floats );
 	cudaMalloc( (void**) &intersected_hull_d, 		size_bool );
 	cudaMalloc( (void**) &first_MLP_voxel_d, 		size_ints );
+
+	char error_statement[] = {"ERROR: reconstruction_cuts GPU array allocations caused...\n"};
+	cudaError_t cudaStatus = CUDA_error_check( error_statement );
+/*
+	cudaError_t cudaStatus = cudaGetLastError();
+	if (cudaStatus != cudaSuccess) 
+		printf("Allocations Error: %s\n", cudaGetErrorString(cudaStatus));*/	
 }
 void reconstruction_cuts_host_2_device(const int start_position, const int num_histories) 
 {
 	unsigned int size_floats		= sizeof(float) * num_histories;
-	//unsigned int size_ints			= sizeof(int) * num_histories; //Warning: declared but never used
-	//unsigned int size_bool			= sizeof(bool) * num_histories;
+	unsigned int size_bool			= sizeof(bool) * num_histories;
 
-	puts("CPU to GPU Transfer...");  
-	//cudaMemcpy( intersected_hull_d, 		intersected_hull_h, 				size_bool,cudaMemcpyHostToDevice );  
-	cudaMemcpy( x_entry_d,				&x_entry_vector[start_position],		size_floats,	cudaMemcpyHostToDevice );
-	cudaMemcpy( y_entry_d,				&y_entry_vector[start_position],		size_floats,	cudaMemcpyHostToDevice );
-	cudaMemcpy( z_entry_d,				&z_entry_vector[start_position],		size_floats,	cudaMemcpyHostToDevice );
-	cudaMemcpy( x_exit_d,				&x_exit_vector[start_position],			size_floats,	cudaMemcpyHostToDevice );
-	cudaMemcpy( y_exit_d,				&y_exit_vector[start_position],			size_floats,	cudaMemcpyHostToDevice );
-	cudaMemcpy( z_exit_d,				&z_exit_vector[start_position],			size_floats,	cudaMemcpyHostToDevice );
-	cudaMemcpy( xy_entry_angle_d,			&xy_entry_angle_vector[start_position],		size_floats,	cudaMemcpyHostToDevice );
-	cudaMemcpy( xz_entry_angle_d,			&xz_entry_angle_vector[start_position],		size_floats,	cudaMemcpyHostToDevice );
-	cudaMemcpy( xy_exit_angle_d,			&xy_exit_angle_vector[start_position],		size_floats,	cudaMemcpyHostToDevice );
-	cudaMemcpy( xz_exit_angle_d,			&xz_exit_angle_vector[start_position],		size_floats,	cudaMemcpyHostToDevice );	
+	cudaMemcpy( intersected_hull_d, 	intersected_hull_h, 						size_bool,		cudaMemcpyHostToDevice );  
+	cudaMemcpy( x_entry_d,				&x_entry_vector[start_position],			size_floats,	cudaMemcpyHostToDevice );
+	cudaMemcpy( y_entry_d,				&y_entry_vector[start_position],			size_floats,	cudaMemcpyHostToDevice );
+	cudaMemcpy( z_entry_d,				&z_entry_vector[start_position],			size_floats,	cudaMemcpyHostToDevice );
+	cudaMemcpy( x_exit_d,				&x_exit_vector[start_position],				size_floats,	cudaMemcpyHostToDevice );
+	cudaMemcpy( y_exit_d,				&y_exit_vector[start_position],				size_floats,	cudaMemcpyHostToDevice );
+	cudaMemcpy( z_exit_d,				&z_exit_vector[start_position],				size_floats,	cudaMemcpyHostToDevice );
+	cudaMemcpy( xy_entry_angle_d,		&xy_entry_angle_vector[start_position],		size_floats,	cudaMemcpyHostToDevice );
+	cudaMemcpy( xz_entry_angle_d,		&xz_entry_angle_vector[start_position],		size_floats,	cudaMemcpyHostToDevice );
+	cudaMemcpy( xy_exit_angle_d,		&xy_exit_angle_vector[start_position],		size_floats,	cudaMemcpyHostToDevice );
+	cudaMemcpy( xz_exit_angle_d,		&xz_exit_angle_vector[start_position],		size_floats,	cudaMemcpyHostToDevice );	
+
+	char error_statement[] = {"ERROR: reconstruction_cuts host->GPU data transfer caused...\n"};
+	cudaError_t cudaStatus =  CUDA_error_check( error_statement );
+	/*cudaError_t cudaStatus = cudaGetLastError();
+	if (cudaStatus != cudaSuccess) 
+		printf("CPU->GPU Error: %s\n", cudaGetErrorString(cudaStatus));	*/
 }
 void reconstruction_cuts_device_2_host(const int start_position, const int num_histories) 
 {
@@ -5622,8 +5473,6 @@ void reconstruction_cuts_device_2_host(const int start_position, const int num_h
 	unsigned int size_ints			= sizeof(int) * num_histories;
 	unsigned int size_bool			= sizeof(bool) * num_histories;
 
-	puts("Memory device to host...");  
-	cudaMemcpy(intersected_hull_h, intersected_hull_d, size_bool, cudaMemcpyDeviceToHost);
 	cudaMemcpy(&first_MLP_voxel_vector[start_position], first_MLP_voxel_d, size_ints, cudaMemcpyDeviceToHost);
 	cudaMemcpy(&x_entry_vector[start_position], x_entry_d, size_floats, cudaMemcpyDeviceToHost);
 	cudaMemcpy(&y_entry_vector[start_position], y_entry_d, size_floats, cudaMemcpyDeviceToHost);
@@ -5631,10 +5480,16 @@ void reconstruction_cuts_device_2_host(const int start_position, const int num_h
 	cudaMemcpy(&x_exit_vector[start_position], x_exit_d, size_floats, cudaMemcpyDeviceToHost);
 	cudaMemcpy(&y_exit_vector[start_position], y_exit_d, size_floats, cudaMemcpyDeviceToHost);
 	cudaMemcpy(&z_exit_vector[start_position], z_exit_d, size_floats, cudaMemcpyDeviceToHost);	
+	cudaMemcpy(intersected_hull_h, intersected_hull_d, size_bool, cudaMemcpyDeviceToHost);
+	
+	char error_statement[] = {"ERROR: reconstruction_cuts GPU->host data transfer caused...\n"};
+	cudaError_t cudaStatus =  CUDA_error_check( error_statement );
+	/*cudaError_t cudaStatus = cudaGetLastError();
+	if (cudaStatus != cudaSuccess) 
+		printf("GPU->CPU Error: %s\n", cudaGetErrorString(cudaStatus));	*/
 }
 void reconstruction_cuts_deallocations()
 {
-	puts("MLP endpoints GPU memory deallocation...");	
 	cudaFree( x_entry_d);
 	cudaFree( y_entry_d);
 	cudaFree( z_entry_d);
@@ -5654,29 +5509,35 @@ void reconstruction_cuts_deallocations()
 void reconstruction_cuts_full_tx( const int num_histories )
 {
 	cudaError_t cudaStatus;
-	int i = 0;
+	reconstruction_histories = 0;
+	int remaining_histories = num_histories, histories_2_process, start_position = 0;
 	int num_blocks = static_cast<int>( (MAX_ENDPOINTS_HISTORIES - 1 + ENDPOINTS_PER_BLOCK*ENDPOINTS_PER_THREAD) / (ENDPOINTS_PER_BLOCK*ENDPOINTS_PER_THREAD));
-	//reconstruction_cuts_full_tx_host_2_device( num_histories );
-	while( i < num_histories ) 
-	{	    
+	while( remaining_histories > 0 )
+	{
+		if( remaining_histories > MAX_ENDPOINTS_HISTORIES )
+			histories_2_process = MAX_ENDPOINTS_HISTORIES;
+		else
+			histories_2_process = remaining_histories;	
+
+		//num_blocks = static_cast<int>( (histories_2_process - 1 + HISTORIES_PER_BLOCK*HISTORIES_PER_THREAD) / (HISTORIES_PER_BLOCK*HISTORIES_PER_THREAD) );  
 		collect_MLP_endpoints_GPU<<< num_blocks, ENDPOINTS_PER_BLOCK >>>
 		( 
 			intersected_hull_d, first_MLP_voxel_d, hull_d, x_entry_d, y_entry_d, z_entry_d, xy_entry_angle_d, xz_entry_angle_d, 
-			x_exit_d, y_exit_d, z_exit_d, xy_exit_angle_d, xz_exit_angle_d, i, num_histories
+			x_exit_d, y_exit_d, z_exit_d, xy_exit_angle_d, xz_exit_angle_d, start_position, num_histories
 		);		
-		
 		cudaStatus = cudaGetLastError();
 		if (cudaStatus != cudaSuccess) 
-			printf("Error: %s\n", cudaGetErrorString(cudaStatus));	
-		i += MAX_ENDPOINTS_HISTORIES;	  
-	}  
-	cudaStatus = cudaDeviceSynchronize();
-	if (cudaStatus != cudaSuccess)
-		fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching Kernel!\n", cudaStatus);
-	//reconstruction_cuts_full_tx_device_2_host(num_histories);
-	reconstruction_cuts_device_2_host(0, num_histories);
-	    
-	for( i = 0; i < num_histories; i++ ) 
+			printf("Error: %s\n", cudaGetErrorString(cudaStatus));
+
+		cudaStatus = cudaDeviceSynchronize();
+		if (cudaStatus != cudaSuccess)
+			fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching Kernel!\n", cudaStatus);
+
+		remaining_histories -= MAX_ENDPOINTS_HISTORIES;
+		start_position		+= MAX_ENDPOINTS_HISTORIES;
+	}
+	reconstruction_cuts_device_2_host(0, num_histories);	    
+	for( int i = 0; i < num_histories; i++ ) 
 	{    
 		if( intersected_hull_h[i] ) 
 		{
@@ -5685,22 +5546,15 @@ void reconstruction_cuts_full_tx( const int num_histories )
 			reconstruction_histories++;
 		}
 	}
-	//free(intersected_hull_h);
-	//reconstruction_cuts_deallocations();
 }
 // ENDPOINTS_TX_MODE = PARTIAL_TX, ENDPOINTS_ALG = BOOL
 void reconstruction_cuts_partial_tx(const int start_position, const int num_histories) 
 {
-  	printf("num_hist: %d\n", num_histories);
-	//reconstruction_cuts_partial_tx_allocations(num_histories);
-	//reconstruction_cuts_partial_tx_host_2_device( start_position, num_histories);
 	reconstruction_cuts_allocations(num_histories);
 	reconstruction_cuts_host_2_device( start_position, num_histories);
-	
-	puts("Collecting MLP endpoints...");
+
 	dim3 dimBlock(ENDPOINTS_PER_BLOCK);
 	int num_blocks = static_cast<int>( (num_histories - 1 + ENDPOINTS_PER_BLOCK*ENDPOINTS_PER_THREAD ) / (ENDPOINTS_PER_BLOCK*ENDPOINTS_PER_THREAD)  );
-	//dim3 dimGrid( static_cast<int>( (num_histories - 1 + ENDPOINTS_PER_BLOCK*ENDPOINTS_PER_THREAD ) / (ENDPOINTS_PER_BLOCK*ENDPOINTS_PER_THREAD)  ) );  
 	collect_MLP_endpoints_GPU<<< num_blocks, dimBlock >>>
 	( 
 		intersected_hull_d, first_MLP_voxel_d, hull_d, x_entry_d, y_entry_d, z_entry_d, xy_entry_angle_d, xz_entry_angle_d,  
@@ -5709,43 +5563,30 @@ void reconstruction_cuts_partial_tx(const int start_position, const int num_hist
 
 	cudaError_t cudaStatus = cudaGetLastError();
 	if (cudaStatus != cudaSuccess) 
-		printf("Error: %s\n", cudaGetErrorString(cudaStatus));						  
+		printf("Endpoints kernel Error: %s\n", cudaGetErrorString(cudaStatus));						  
 	
 	cudaStatus = cudaDeviceSynchronize();
 	if (cudaStatus != cudaSuccess)
 		fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching Kernel!\n", cudaStatus);
-	
-	//reconstruction_cuts_partial_tx_device_2_host(start_position, num_histories);
+
 	reconstruction_cuts_device_2_host(start_position, num_histories);
-	
-	puts("Vectors manupilating...");	
-	for( int i = 0; i < num_histories; i++ ) {
-	    
-		if( intersected_hull_h[i] ) {
- 
-			first_MLP_voxel_vector.at(reconstruction_histories) = first_MLP_voxel_vector.at( i + start_position );
+	for( int i = 0; i < num_histories; i++ ) 
+	{    
+		if( intersected_hull_h[i] ) 
+		{
+			first_MLP_voxel_vector[reconstruction_histories] = first_MLP_voxel_vector[ i + start_position ];
 			data_shift_vectors( i + start_position, reconstruction_histories );
 			reconstruction_histories++;
 		}
 	}	
-	puts("Free host/GPU memory...");
-	//free(intersected_hull_h); 
-	//reconstruction_cuts_partial_tx_deallocations();
 	reconstruction_cuts_deallocations();
 }
 // ENDPOINTS_TX_MODE = PARTIAL_TX_PREALLOCATED, ENDPOINTS_ALG = BOOL
 void reconstruction_cuts_partial_tx_preallocated(const int start_position, const int num_histories) 
 { 
-	//printf("num_hist: %d\n", num_histories);
-	//reconstruction_cuts_partial_tx_host_2_device( start_position, num_histories);
 	reconstruction_cuts_host_2_device( start_position, num_histories);
-	
-	puts("Collecting MLP endpoints...");
-
 	int num_blocks = static_cast<int>( (num_histories - 1 + ENDPOINTS_PER_BLOCK*ENDPOINTS_PER_THREAD ) / (ENDPOINTS_PER_BLOCK*ENDPOINTS_PER_THREAD)  );
 	dim3 dimBlock(ENDPOINTS_PER_BLOCK);
-	//dim3 dimGrid( static_cast<int>( (num_histories - 1 + ENDPOINTS_PER_BLOCK*ENDPOINTS_PER_THREAD ) / (ENDPOINTS_PER_BLOCK*ENDPOINTS_PER_THREAD)  ) ); 
-	//printf("NUm blocks: %d\n", num_blocks);
 	collect_MLP_endpoints_GPU<<< num_blocks, dimBlock >>>
 	( 
 		intersected_hull_d, first_MLP_voxel_d, hull_d, x_entry_d, y_entry_d, z_entry_d, xy_entry_angle_d, xz_entry_angle_d, 
@@ -5760,10 +5601,7 @@ void reconstruction_cuts_partial_tx_preallocated(const int start_position, const
 	if (cudaStatus != cudaSuccess)
 		fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching Kernel!\n", cudaStatus);						
 
-	//reconstruction_cuts_partial_tx_device_2_host(start_position, num_histories);
 	reconstruction_cuts_device_2_host(start_position, num_histories);
-
-	puts("Vectors manupilating...");	
 	for( int i = 0; i < num_histories; i++ ) 
 	{	    
 		if( intersected_hull_h[i] ) 
@@ -5773,7 +5611,6 @@ void reconstruction_cuts_partial_tx_preallocated(const int start_position, const
 			reconstruction_histories++;
 		}
 	}	
-	//free(intersected_hull_h); 
 }
 // ENDPOINTS_ALG = NO_BOOL
 void reconstruction_cuts_allocations_nobool( const int num_histories)
@@ -5781,7 +5618,6 @@ void reconstruction_cuts_allocations_nobool( const int num_histories)
 	unsigned int size_floats		= sizeof(float) * num_histories;
 	unsigned int size_ints			= sizeof(int) * num_histories;
 
-	puts("GPU memory allocation...");	
 	cudaMalloc( (void**) &x_entry_d,			size_floats );
 	cudaMalloc( (void**) &y_entry_d,			size_floats );
 	cudaMalloc( (void**) &z_entry_d,			size_floats );
@@ -5797,9 +5633,7 @@ void reconstruction_cuts_allocations_nobool( const int num_histories)
 void reconstruction_cuts_host_2_device_nobool(const int start_position, const int num_histories) 
 {
 	unsigned int size_floats		= sizeof(float) * num_histories;
-	//unsigned int size_ints			= sizeof(int) * num_histories;
 
-	puts("CPU to GPU Transfer...");  
 	cudaMemcpy( x_entry_d,				&x_entry_vector[start_position],		size_floats,	cudaMemcpyHostToDevice );
 	cudaMemcpy( y_entry_d,				&y_entry_vector[start_position],		size_floats,	cudaMemcpyHostToDevice );
 	cudaMemcpy( z_entry_d,				&z_entry_vector[start_position],		size_floats,	cudaMemcpyHostToDevice );
@@ -5815,8 +5649,7 @@ void reconstruction_cuts_device_2_host_nobool(const int start_position, const in
 {
 	unsigned int size_floats		= sizeof(float) * num_histories;
 	unsigned int size_ints			= sizeof(int) * num_histories;
-
-	puts("Memory device to host...");  
+  
 	cudaMemcpy(&first_MLP_voxel_vector[start_position], first_MLP_voxel_d, size_ints, cudaMemcpyDeviceToHost);
 	cudaMemcpy(&x_entry_vector[start_position], x_entry_d, size_floats, cudaMemcpyDeviceToHost);
 	cudaMemcpy(&y_entry_vector[start_position], y_entry_d, size_floats, cudaMemcpyDeviceToHost);
@@ -5827,7 +5660,6 @@ void reconstruction_cuts_device_2_host_nobool(const int start_position, const in
 }
 void reconstruction_cuts_deallocations_nobool()
 {
-	puts("MLP endpoints GPU memory deallocation...");	
 	cudaFree( x_entry_d);
 	cudaFree( y_entry_d);
 	cudaFree( z_entry_d);
@@ -5844,51 +5676,52 @@ void reconstruction_cuts_deallocations_nobool()
 void reconstruction_cuts_full_tx_nobool( const int num_histories )
 {
 	cudaError_t cudaStatus;
-	int i = 0;
+	reconstruction_histories = 0;
+	int remaining_histories = num_histories, histories_2_process, start_position = 0;
 	int num_blocks = static_cast<int>( (MAX_ENDPOINTS_HISTORIES - 1 + ENDPOINTS_PER_BLOCK*ENDPOINTS_PER_THREAD) / (ENDPOINTS_PER_BLOCK*ENDPOINTS_PER_THREAD));
-	while( i < num_histories ) 
-	{	    
+	while( remaining_histories > 0 )
+	{
+		if( remaining_histories > MAX_ENDPOINTS_HISTORIES )
+			histories_2_process = MAX_ENDPOINTS_HISTORIES;
+		else
+			histories_2_process = remaining_histories;	
+
+		//num_blocks = static_cast<int>( (histories_2_process - 1 + HISTORIES_PER_BLOCK*HISTORIES_PER_THREAD) / (HISTORIES_PER_BLOCK*HISTORIES_PER_THREAD) );  
 		collect_MLP_endpoints_GPU_nobool<<< num_blocks, ENDPOINTS_PER_BLOCK >>>
 		( 
 			first_MLP_voxel_d, hull_d, x_entry_d, y_entry_d, z_entry_d, xy_entry_angle_d, xz_entry_angle_d, 
-			x_exit_d, y_exit_d, z_exit_d, xy_exit_angle_d, xz_exit_angle_d, i, num_histories
+			x_exit_d, y_exit_d, z_exit_d, xy_exit_angle_d, xz_exit_angle_d, start_position, num_histories
 		);		
 		cudaStatus = cudaGetLastError();
 		if (cudaStatus != cudaSuccess) 
-			printf("Error: %s\n", cudaGetErrorString(cudaStatus));								
-		i+=MAX_ENDPOINTS_HISTORIES;	  	  
-	}  
-	cudaStatus = cudaDeviceSynchronize();
-	if (cudaStatus != cudaSuccess)
-		fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching Kernel!\n", cudaStatus);  
-	
-	//reconstruction_cuts_full_tx_device_2_host_nobool( num_histories );
-	reconstruction_cuts_device_2_host_nobool( 0, num_histories );
+			printf("Error: %s\n", cudaGetErrorString(cudaStatus));
 
-	for( i = 0; i < num_histories; i++ ) 
+		cudaStatus = cudaDeviceSynchronize();
+		if (cudaStatus != cudaSuccess)
+			fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching Kernel!\n", cudaStatus);
+
+		remaining_histories -= MAX_ENDPOINTS_HISTORIES;
+		start_position		+= MAX_ENDPOINTS_HISTORIES;
+	}
+	reconstruction_cuts_device_2_host_nobool(0, num_histories);	    
+	for( int i = 0; i < num_histories; i++ ) 
 	{    
-		if( first_MLP_voxel_vector[i] == (NUM_VOXELS + 1) ) 
+		if( first_MLP_voxel_vector[i + start_position] != NUM_VOXELS ) 
 		{
 			first_MLP_voxel_vector[reconstruction_histories] = first_MLP_voxel_vector[i];
-			data_shift_vectors( i, reconstruction_histories );			
+			data_shift_vectors( i, reconstruction_histories );
 			reconstruction_histories++;
 		}
 	}
-	//reconstruction_cuts_deallocations_nobool();
 }
 // ENDPOINTS_TX_MODE = PARTIAL_TX, ENDPOINTS_ALG = NO_BOOL
 void reconstruction_cuts_partial_tx_nobool(const int start_position, const int num_histories) 
 { 
-	printf("num_hist: %d\n", num_histories);
-	//reconstruction_cuts_partial_tx_allocations_nobool(num_histories);
-	//reconstruction_cuts_partial_tx_host_2_device_nobool( start_position, num_histories);
 	reconstruction_cuts_allocations_nobool(num_histories);
 	reconstruction_cuts_host_2_device_nobool( start_position, num_histories);
-		
-	puts("Collecting MLP endpoints...");	
+			
 	int num_blocks = static_cast<int>( (num_histories - 1 + ENDPOINTS_PER_BLOCK*ENDPOINTS_PER_THREAD ) / (ENDPOINTS_PER_BLOCK*ENDPOINTS_PER_THREAD)  );
 	dim3 dimBlock(ENDPOINTS_PER_BLOCK);
-	//dim3 dimGrid( static_cast<int>( (num_histories - 1 + ENDPOINTS_PER_BLOCK*ENDPOINTS_PER_THREAD ) / (ENDPOINTS_PER_BLOCK*ENDPOINTS_PER_THREAD)  ) );  
 	collect_MLP_endpoints_GPU_nobool<<< num_blocks, dimBlock >>>
 	( 
 		first_MLP_voxel_d, hull_d, x_entry_d, y_entry_d, z_entry_d, xy_entry_angle_d, xz_entry_angle_d, x_exit_d, y_exit_d, z_exit_d, xy_exit_angle_d, xz_exit_angle_d, 0, num_histories 
@@ -5902,35 +5735,24 @@ void reconstruction_cuts_partial_tx_nobool(const int start_position, const int n
 	if (cudaStatus != cudaSuccess)
 		fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching Kernel!\n", cudaStatus);
 	
-	//reconstruction_cuts_partial_tx_device_2_host_nobool(start_position, num_histories);
 	reconstruction_cuts_device_2_host_nobool(start_position, num_histories);
-			
-	puts("Vectors manupilating...");	
 	for( int i = 0; i < num_histories; i++ ) 
 	{    
-		if( first_MLP_voxel_vector[i + start_position] == NUM_VOXELS + 1 ) 
+		if( first_MLP_voxel_vector[i + start_position] != NUM_VOXELS ) 
 		{
 			first_MLP_voxel_vector[reconstruction_histories] = first_MLP_voxel_vector[i + start_position];
 			data_shift_vectors( i + start_position, reconstruction_histories );
 			reconstruction_histories++;
 		}
 	}	
-	puts("Free host/GPU memory...");
-	//free(intersected_hull_h); 
-	//reconstruction_cuts_partial_tx_deallocations_nobool();
 	reconstruction_cuts_deallocations_nobool();
 }
 // ENDPOINTS_TX_MODE = PARTIAL_TX_PREALLOCATED, ENDPOINTS_ALG = NO_BOOL
 void reconstruction_cuts_partial_tx_preallocated_nobool(const int start_position, const int num_histories) 
 {
-	//reconstruction_cuts_partial_tx_host_2_device_nobool( start_position, num_histories);
 	reconstruction_cuts_host_2_device_nobool( start_position, num_histories);
-		
-	puts("Collecting MLP endpoints...");	
 	int num_blocks = static_cast<int>( (num_histories - 1 + ENDPOINTS_PER_BLOCK*ENDPOINTS_PER_THREAD ) / (ENDPOINTS_PER_BLOCK*ENDPOINTS_PER_THREAD)  );
 	dim3 dimBlock(ENDPOINTS_PER_BLOCK);
-	//dim3 dimGrid( static_cast<int>( (num_histories - 1 + ENDPOINTS_PER_BLOCK*ENDPOINTS_PER_THREAD ) / (ENDPOINTS_PER_BLOCK*ENDPOINTS_PER_THREAD)  ) ); 
-	//printf("NUm blocks: %d\n", num_blocks);
 	collect_MLP_endpoints_GPU_nobool<<< num_blocks, dimBlock >>>
 	( 
 		first_MLP_voxel_d, hull_d, x_entry_d, y_entry_d, z_entry_d, xy_entry_angle_d, xz_entry_angle_d, x_exit_d, y_exit_d, z_exit_d, xy_exit_angle_d, xz_exit_angle_d, 0, num_histories 
@@ -5944,20 +5766,16 @@ void reconstruction_cuts_partial_tx_preallocated_nobool(const int start_position
 	if (cudaStatus != cudaSuccess)
 		fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching Kernel!\n", cudaStatus);
 	
-	//reconstruction_cuts_partial_tx_device_2_host_nobool(start_position, num_histories);
-	reconstruction_cuts_device_2_host_nobool(start_position, num_histories);
-
-	puts("Vectors manupilating...");	
+	reconstruction_cuts_device_2_host_nobool(start_position, num_histories);	
 	for( int i = 0; i < num_histories; i++ ) 
 	{  
-		if( first_MLP_voxel_vector[i + start_position] == NUM_VOXELS + 1 ) 
+		if( first_MLP_voxel_vector[i + start_position] != NUM_VOXELS ) 
 		{
 			first_MLP_voxel_vector.at(reconstruction_histories) = first_MLP_voxel_vector.at( i + start_position );
 			data_shift_vectors( i + start_position, reconstruction_histories );
 			reconstruction_histories++;
 		}
 	}	
-	//free(intersected_hull_h); 
 }
 /***********************************************************************************************************************************************************************************************************************/
 /****************************************************************************************** Generate/Export/Import MLP Lookup Tables ***********************************************************************************/
@@ -6018,8 +5836,8 @@ void generate_scattering_coefficient_table()
 	fclose(scattering_table_file);
 	//for( int step_num = 0; step_num <= DEPTH_TABLE_ELEMENTS; step_num++ )
 	//	cout << scattering_table_h[step_num] << endl;
-	cout << "elements = " << i << endl;
-	cout << "DEPTH_TABLE_ELEMENTS = " << DEPTH_TABLE_ELEMENTS << endl;
+	//cout << "elements = " << i << endl;
+	//cout << "DEPTH_TABLE_ELEMENTS = " << DEPTH_TABLE_ELEMENTS << endl;
 	//cout << scattering_table_h[i-1] << endl;
 	//cout << (pow( E_0 * ( 1 + 0.038 * log(DEPTH_TABLE_RANGE / X0) ), 2.0 ) / X0) << endl;
 	
@@ -6072,8 +5890,8 @@ void generate_polynomial_tables()
 	fclose( poly_3_4_file  );
 	fclose( poly_2_6_file  );
 	fclose( poly_3_12_file );
-	cout << "i = " << i << endl;														
-	cout << "POLY_TABLE_ELEMENTS = " << POLY_TABLE_ELEMENTS << endl;			
+	//cout << "i = " << i << endl;														
+	//cout << "POLY_TABLE_ELEMENTS = " << POLY_TABLE_ELEMENTS << endl;			
 }
 void import_trig_tables()
 {
@@ -6122,7 +5940,7 @@ void import_polynomial_tables()
 	fclose( poly_2_6_file  );
 	fclose( poly_3_12_file );
 }
-void tables_2_GPU()
+void MLP_lookup_table_2_GPU()
 {
 	unsigned int size_trig_tables			= ( TRIG_TABLE_ELEMENTS	 + 1 ) * sizeof(double);
 	unsigned int size_coefficient_tables	= ( DEPTH_TABLE_ELEMENTS + 1 ) * sizeof(double);
@@ -6146,8 +5964,24 @@ void tables_2_GPU()
 	cudaMemcpy( poly_2_6_d,			poly_2_6_h,			size_poly_tables,			cudaMemcpyHostToDevice );
 	cudaMemcpy( poly_3_12_d,		poly_3_12_h,		size_poly_tables,			cudaMemcpyHostToDevice );
 }
-void free_GPU_tables()
+void generate_MLP_lookup_tables()
 {
+	generate_trig_tables();
+	generate_scattering_coefficient_table();
+	generate_polynomial_tables();
+	MLP_lookup_table_2_GPU();
+}
+void free_MLP_lookup_tables()
+{
+	free( sin_table_h);
+	free( cos_table_h);
+	free( scattering_table_h);
+	free( poly_1_2_h);
+	free( poly_2_3_h);
+	free( poly_3_4_h);
+	free( poly_2_6_h);
+	free( poly_3_12_h);
+
 	cudaFree( sin_table_d);
 	cudaFree( cos_table_d);
 	cudaFree( scattering_table_d);
@@ -6242,6 +6076,10 @@ void transfer_intermediate_results_device_to_host( const int start_position, con
 	
 	first_MLP_voxel_vector.resize( num_histories );
 	  
+	//cudaStatus = cudaDeviceSynchronize();
+	//if (cudaStatus != cudaSuccess)
+	//	fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching Kernel!\n", cudaStatus);  
+
 	cudaMemcpy(intersected_hull_h, intersected_hull_d, size_bool, cudaMemcpyDeviceToHost);
 	cudaMemcpy(&first_MLP_voxel_vector[start_position], first_MLP_voxel_d, size_ints, cudaMemcpyDeviceToHost);
 	cudaMemcpy(&x_entry_vector[start_position], x_entry_d, size_floats, cudaMemcpyDeviceToHost);
@@ -6352,7 +6190,7 @@ __device__ void find_MLP_path_GPU
 (
 	float* x, double b_i, unsigned int first_MLP_voxel_number, double x_in_object, double y_in_object, double z_in_object, 
 	double x_out_object, double y_out_object, double z_out_object, double xy_entry_angle, double xz_entry_angle, double xy_exit_angle, double xz_exit_angle,
-	float lambda, unsigned int* path, int& number_of_intersections, double& effective_chord_length ,double& a_i_dot_x_k_partially, double& a_i_dot_a_i_partially
+	double lambda, unsigned int* path, int& number_of_intersections, double& effective_chord_length ,double& a_i_dot_x_k_partially, double& a_i_dot_a_i_partially
 ) 
 {
   
@@ -6575,7 +6413,7 @@ __device__ void find_MLP_path_GPU_tabulated
 (
 	float* x, double b_i, unsigned int first_MLP_voxel_number, double x_in_object, double y_in_object, double z_in_object, 
 	double x_out_object, double y_out_object, double z_out_object, double xy_entry_angle, double xz_entry_angle, double xy_exit_angle, double xz_exit_angle,
-	float lambda, unsigned int* path, float& update_value_history, int& number_of_intersections,
+	double lambda, unsigned int* path, int& number_of_intersections, double& effective_chord_length, double& a_i_dot_x_k_partially, double& a_i_dot_a_i_partially,
 	double* sin_table, double* cos_table, double* scattering_table, double* poly_1_2, double* poly_2_3, double* poly_3_4, double* poly_2_6, double* poly_3_12
 ) 
 {
@@ -6635,12 +6473,15 @@ __device__ void find_MLP_path_GPU_tabulated
 	path[number_of_intersections] = voxel;
 	number_of_intersections++;
 
-	double effective_chord_length = EffectiveChordLength_GPU( ( xy_entry_angle + xy_exit_angle ) / 2.0, ( xz_entry_angle + xz_exit_angle) / 2.0 );
-	double a_j_times_a_j = effective_chord_length * effective_chord_length;
+	effective_chord_length = EffectiveChordLength_GPU( ( xy_entry_angle + xy_exit_angle ) / 2.0, ( xz_entry_angle + xz_exit_angle) / 2.0 );
+	//double effective_chord_length = EffectiveChordLength_GPU( ( xy_entry_angle + xy_exit_angle ) / 2.0, ( xz_entry_angle + xz_exit_angle) / 2.0 );
+	//double a_j_times_a_j = effective_chord_length * effective_chord_length;
+	a_i_dot_x_k_partially = x[voxel];
+	a_i_dot_a_i_partially = pow(effective_chord_length, 2.0);
 	//double a_i_dot_x_k = x[voxel];
-	//double a_i_dot_a_i = effective_chord_length * effective_chord_length;
-	double a_i_dot_x_k = x[voxel] * effective_chord_length;
-	double a_i_dot_a_i = a_j_times_a_j;
+	//double a_i_dot_a_i = pow(effective_chord_length, 2.0);
+	//double a_i_dot_x_k = x[voxel] * effective_chord_length;
+	//double a_i_dot_a_i = a_j_times_a_j;
 
 	//while( u_1 < u_2 - parameters.MLP_U_STEP)
 	while( depth_2_go > MLP_U_STEP )
@@ -6708,9 +6549,9 @@ __device__ void find_MLP_path_GPU_tabulated
 		if( voxel != path[number_of_intersections-1] )
 		{
 			path[number_of_intersections] = voxel;	
-			a_i_dot_x_k += x[voxel] * effective_chord_length;
-			//a_i_dot_x_k += x[voxel];
-			a_i_dot_a_i += a_j_times_a_j;
+			//a_i_dot_x_k += x[voxel] * effective_chord_length;
+			a_i_dot_x_k_partially += x[voxel];
+			//a_i_dot_a_i += a_j_times_a_j;
 			number_of_intersections++;
 		}
 		u_1 += MLP_U_STEP;
@@ -6725,13 +6566,13 @@ __device__ void find_MLP_path_GPU_tabulated
 	//++num_intersections;
 	//a_i_dot_x_k *= effective_chord_length;
 	//a_i_dot_a_i *= num_intersections;
-	update_value_history = effective_chord_length * (( b_i - a_i_dot_x_k ) /  a_i_dot_a_i) * lambda;
+	//update_value_history = effective_chord_length * (( b_i - a_i_dot_x_k ) /  a_i_dot_a_i) * lambda;
 }
 __global__ void block_update_GPU
 (
 	float* x, float* x_entry, float* y_entry, float* z_entry, float* xy_entry_angle, float* xz_entry_angle, 
 	float* x_exit, float* y_exit, float* z_exit, float* xy_exit_angle, float* xz_exit_angle, float* WEPL, 
-	unsigned int* first_MLP_voxel, float* x_update, unsigned int* S, int start_proton_id, int num_histories, float lambda
+	unsigned int* first_MLP_voxel, float* x_update, unsigned int* S, int start_proton_id, int num_histories, double lambda
 ) 
 {
 
@@ -6753,15 +6594,15 @@ __global__ void block_update_GPU
 	if( proton_id < num_histories ) 
 	{
 	  	  
-		unsigned int* a_i;
-		a_i = (unsigned int*)malloc( MAX_INTERSECTIONS * sizeof(unsigned int));
-		
+		//unsigned int* a_i;
+		//a_i = (unsigned int*)malloc( MAX_INTERSECTIONS * sizeof(unsigned int));
+		unsigned int a_i[MAX_INTERSECTIONS];
 		//__shared__ unsigned int* a_i[MAX_INTERSECTIONS];
 		
 	
 		// Initialize arrays to zero (SHOULD BE REMOVED)
 	       // if ( proton_id == start_proton_id )
-		//	for(int j = 0 ; j < MAX_INTERSECTIONS; ++j) 
+		//	for(int j = 0 ; j < MAX_INTERSECTIONS; j++) 
 			//	a_i[j] = 0;
 		
 		for( int history = 0; history < HISTORIES_PER_THREAD; history++ ) 
@@ -6804,61 +6645,78 @@ __global__ void block_update_GPU_tabulated
 (
 	float* x, float* x_entry, float* y_entry, float* z_entry, float* xy_entry_angle, float* xz_entry_angle, 
 	float* x_exit, float* y_exit, float* z_exit, float* xy_exit_angle, float* xz_exit_angle, float* WEPL, 
-	unsigned int* first_MLP_voxel, float* x_update, unsigned int* S, int start_proton_id, int num_histories, float lambda,
+	unsigned int* first_MLP_voxel, float* x_update, unsigned int* S, int start_proton_id, int num_histories, double lambda,
 	double* sin_table, double* cos_table, double* scattering_table, double* poly_1_2, double* poly_2_3, double* poly_3_4, double* poly_2_6, double* poly_3_12
 ) 
-{
-
+{	
 	// Shared memory
 	//__shared__ double* x_block_update;
 	//__shared__ unsigned int* voxel_intersections;
 	
 	//x_block_update = (double*)malloc( NUM_VOXELS * sizeof(double));
 	//voxel_intersections = (unsigned int*)malloc( MAX_INTERSECTIONS * sizeof(unsigned int));
+	int voxel=0;
+	double b_i=0.0;
+	double a_i_dot_a_i, a_i_dot_x_k;
 	
+	double effective_chord_length = 0.0;
+	int number_of_intersections;
 	
-	int voxel;
-	int proton_id =  start_proton_id + threadIdx.x * HISTORIES_PER_THREAD + blockIdx.x * HISTORIES_PER_BLOCK;
-			
-	if( proton_id < num_histories ) 
-	{	 	  
-		unsigned int a_i[MAX_INTERSECTIONS];
-		//a_i = (unsigned int*)malloc( MAX_INTERSECTIONS * sizeof(unsigned int));
+	int proton_id =  start_proton_id + threadIdx.x * HISTORIES_PER_THREAD + blockIdx.x * HISTORIES_PER_BLOCK * HISTORIES_PER_THREAD;
 		
-		// Initialize arrays to zero
-		for(int j = 0 ; j < MAX_INTERSECTIONS; ++j) 
-		      a_i[j] = 0;
-			
+	if( proton_id < num_histories ) 
+	{
+	  	  
+		//unsigned int* a_i;
+		//a_i = (unsigned int*)malloc( MAX_INTERSECTIONS * sizeof(unsigned int));
+		unsigned int a_i[MAX_INTERSECTIONS];
+		//__shared__ unsigned int* a_i[MAX_INTERSECTIONS];
+		
+	
+		// Initialize arrays to zero (SHOULD BE REMOVED)
+	       // if ( proton_id == start_proton_id )
+		//for(int j = 0 ; j < MAX_INTERSECTIONS; j++) 
+			//a_i[j] = 0;
+		
 		for( int history = 0; history < HISTORIES_PER_THREAD; history++ ) 
 		{	
 			//int proton_id = blockIdx.x * blockDim.x + threadIdx.x + start_proton_id;	  
-			//int proton_id =  history + threadIdx.x * HISTORIES_PER_THREAD + start_proton_id; 		
+			//int proton_id =  history + threadIdx.x * HISTORIES_PER_THREAD + start_proton_id; 			
 			//proton_id =  start_proton_id + history + threadIdx.x * HISTORIES_PER_THREAD + blockIdx.x * HISTORIES_PER_BLOCK;
 			
 			if( proton_id < num_histories ) 
 			{		  
-				float update_value_history = 0.0;
-				int number_of_intersections = 0;
+				//float update_value_history = 0.0;
+				number_of_intersections = 0;
+				a_i_dot_a_i = 0.0;
+				a_i_dot_x_k = 0.0;
 	
 				//collect_MLP_endpoints_GPU(x, hull, x_entry, y_entry, z_entry, xy_entry_angle, xz_entry_angle, x_exit, y_exit, z_exit,  xy_exit_angle, 
 					//	xz_exit_angle, WEPL, lambda, proton_id, post_cut_protons, a_i, update_value_history, number_of_intersections); // Each thread runs a proton
-						
-				find_MLP_path_GPU_tabulated(x, WEPL[proton_id], first_MLP_voxel[proton_id] ,x_entry[proton_id], y_entry[proton_id], z_entry[proton_id], x_exit[proton_id], y_exit[proton_id], z_exit[proton_id], xy_entry_angle[proton_id],
-						      xz_entry_angle[proton_id], xy_exit_angle[proton_id], xz_exit_angle[proton_id], lambda, a_i, update_value_history, number_of_intersections,
-							  sin_table, cos_table, scattering_table, poly_1_2, poly_2_3, poly_3_4, poly_2_6, poly_3_12);
-						      						      
-				// Copy a_i to global	
+				b_i = WEPL[proton_id];		
+				find_MLP_path_GPU_tabulated
+				(
+					x, b_i, first_MLP_voxel[proton_id] ,x_entry[proton_id], y_entry[proton_id], z_entry[proton_id], x_exit[proton_id], y_exit[proton_id], z_exit[proton_id], xy_entry_angle[proton_id],
+					xz_entry_angle[proton_id], xy_exit_angle[proton_id], xz_exit_angle[proton_id], lambda, a_i, number_of_intersections, effective_chord_length, a_i_dot_x_k, a_i_dot_a_i,
+					sin_table, cos_table, scattering_table, poly_1_2, poly_2_3, poly_3_4, poly_2_6, poly_3_12
+				);
+						      
+				a_i_dot_a_i *=number_of_intersections;
+				a_i_dot_x_k *=effective_chord_length;
+					      
+						      	
+				// Copy a_i to global
 				for (int j = 0 ; j < number_of_intersections; ++j) 
 				{
 					voxel = a_i[j];
 					atomicAdd( &( S[voxel]), 1 );
-					atomicAdd( &( x_update[voxel]) , update_value_history ); 
-				}					
-			}	
+					atomicAdd( &( x_update[voxel]) , effective_chord_length * (( b_i - a_i_dot_x_k ) /  a_i_dot_a_i) * lambda ); 
+				}	
+			}
 			proton_id++;
 		}	
-		free(a_i);  	
-	}		
+		free(a_i);    	 
+	}	
 }
 __global__ void init_image_GPU(float* x_update, unsigned int* S) 
 {
@@ -6885,7 +6743,7 @@ __global__ void init_image_GPU(float* x_update, unsigned int* S)
 		voxel++;	 
 	 }  
 }
-__global__ void image_update_GPU (float* x, float* x_update, unsigned int* voxel_intersections) 
+__global__ void image_update_GPU (float* x, float* x_update, unsigned int* S) 
 {
   
     //int column = blockIdx.x;
@@ -6899,31 +6757,19 @@ __global__ void image_update_GPU (float* x, float* x_update, unsigned int* voxel
 	int voxel = column_start  + row * COLUMNS + slice * ROWS * COLUMNS;
 	//int voxel_start = column_start  + row * COLUMNS + slice * ROWS * COLUMNS;
 	
-	for( int shift = 0; shift < VOXELS_PER_THREAD; shift++ ) {
-	  
+	for( int shift = 0; shift < VOXELS_PER_THREAD; shift++ ) 
+	{	  
 		//voxel = (column_start  + shift) +  row * COLUMNS + slice * ROWS * COLUMNS;
-		//voxel = voxel_start  + shift;
-		
-		if( (voxel < NUM_VOXELS) && (voxel_intersections[voxel] > 0) ) {
-		  
-			atomicAdd(&(x[voxel]), x_update[voxel] / voxel_intersections[voxel]);
+		//voxel = voxel_start  + shift;	
+		if( (voxel < NUM_VOXELS) && (S[voxel] > 0) ) 
+		{		  
+			//atomicAdd(&(x[voxel]), x_update[voxel] / voxel_intersections[voxel]);
+			x[voxel] += x_update[voxel] / S[voxel];
 			x_update[voxel] = 0.0;
-			voxel_intersections[voxel]=0;
+			S[voxel] = 0;
 		}
 		voxel++;
 	}
-
-
-	
-	//if( voxel < NUM_VOXELS && num_intersections[voxel] > 0 )
-		//x_k[voxel] += x_update[voxel] / num_intersections[voxel];
-
-	//int voxel = threadIdx.x;
-       /* if(voxel < NUM_VOXELS && voxel_intersections[voxel] > 0 ) {
-	  atomicAdd(&(x[voxel]) , x_update[voxel] / voxel_intersections[voxel]);
-	  x_update[voxel] = 0.0;
-	  voxel_intersections[voxel]=0;
-	}*/
 }
 void transfer_reconstruction_images()
 {
@@ -7114,21 +6960,16 @@ void DROP_full_tx(const int num_histories)
 	char iterate_filename[256];
 	int remaining_histories, start_position = 0, histories_2_process, num_blocks;
 	int column_blocks = static_cast<int>(COLUMNS/VOXELS_PER_THREAD);
-	dim3 dimBlock( SLICES );
-	dim3 dimGrid( column_blocks, ROWS );
-
-	//DROP_full_tx_setup(reconstruction_histories);
 	DROP_allocations(num_histories);
 	DROP_host_2_device( start_position, num_histories);
+	dim3 dimBlock( SLICES );
+	dim3 dimGrid( column_blocks, ROWS );
 	for(int iteration = 1; iteration <= ITERATIONS ; ++iteration) 
 	{	    
-		//i = 0;
 		printf("Performing iteration %u of image reconstruction\n", iteration);
-		//transfer_intermediate_results_host_to_device( reconstruction_histories );
 		remaining_histories = num_histories;
 		start_position = 0;
-		//begin_DROP_iteration = clock();
-		timer( START, begin_DROP_iteration, end_DROP_iteration, execution_time_DROP_iteration, "for DROP iteration");	
+		timer( START, begin_DROP_iteration, "for DROP iteration");	
 		while( remaining_histories > 0 )
 		{
 			if( remaining_histories > DROP_BLOCK_SIZE )
@@ -7150,16 +6991,10 @@ void DROP_full_tx(const int num_histories)
 			cudaStatus = cudaGetLastError();
 			if (cudaStatus != cudaSuccess) 
 				printf("Error: %s\n", cudaGetErrorString(cudaStatus));
+
 			remaining_histories -= DROP_BLOCK_SIZE;
 			start_position		+= DROP_BLOCK_SIZE;
 		}
-		//end_DROP_iteration = clock();
-		//clock_cycles_DROP_iteration = end_DROP_iteration - begin_DROP_iteration;
-		//execution_time_DROP_iteration = static_cast<double>(clock_cycles_DROP_iteration) / CLOCKS_PER_SEC;
-		//printf( "Execution time for iteration %d =  %lf seconds\n", iteration, execution_time_DROP_iteration );
-		timer( STOP, begin_DROP_iteration, end_DROP_iteration, execution_time_DROP_iteration, "for DROP iteration");
-		execution_times_DROP_iterations.push_back(execution_time_DROP_iteration);
-		
 		// Transfer the updated image to the host and write it to disk
 		sprintf(iterate_filename, "%s%d", "x_", iteration );
 		if( WRITE_X_KI ) 
@@ -7167,6 +7002,8 @@ void DROP_full_tx(const int num_histories)
 			transfer_image_device_to_host();
 			array_2_disk(iterate_filename, OUTPUT_DIRECTORY, OUTPUT_FOLDER, x_h, COLUMNS, ROWS, SLICES, NUM_VOXELS, true ); 
 		}
+		execution_time_DROP_iteration = timer( STOP, begin_DROP_iteration, "for DROP iteration");			
+		execution_times_DROP_iterations.push_back(execution_time_DROP_iteration);
 	}
 	DROP_deallocations();
 }
@@ -7179,17 +7016,12 @@ void DROP_partial_tx( const int num_histories )
 	int column_blocks = static_cast<int>(COLUMNS/VOXELS_PER_THREAD);
 	dim3 dimBlock( SLICES );
 	dim3 dimGrid( column_blocks, ROWS );
-
-	//DROP_full_tx_setup(reconstruction_histories);
 	for(int iteration = 1; iteration <= ITERATIONS ; ++iteration) 
 	{	    
-		//i = 0;
 		printf("Performing iteration %u of image reconstruction\n", iteration);
-		//transfer_intermediate_results_host_to_device( reconstruction_histories );
 		remaining_histories = num_histories;
 		start_position = 0;
-		//begin_DROP_iteration = clock();
-		timer( START, begin_DROP_iteration, end_DROP_iteration, execution_time_DROP_iteration, "for DROP iteration");	
+		timer( START, begin_DROP_iteration, "for DROP iteration");			
 		while( remaining_histories > 0 )
 		{
 			if( remaining_histories > DROP_BLOCK_SIZE )
@@ -7219,13 +7051,6 @@ void DROP_partial_tx( const int num_histories )
 			remaining_histories -= DROP_BLOCK_SIZE;
 			start_position		+= DROP_BLOCK_SIZE;
 		}
-		//end_DROP_iteration = clock();
-		//clock_cycles_DROP_iteration = end_DROP_iteration - begin_DROP_iteration;
-		//execution_time_DROP_iteration = static_cast<double>(clock_cycles_DROP_iteration) / CLOCKS_PER_SEC;
-		//printf( "Execution time for iteration %d =  %lf seconds\n", iteration, execution_time_DROP_iteration );
-		timer( STOP, begin_DROP_iteration, end_DROP_iteration, execution_time_DROP_iteration, "for DROP iteration");
-		execution_times_DROP_iterations.push_back(execution_time_DROP_iteration);
-		
 		// Transfer the updated image to the host and write it to disk
 		sprintf(iterate_filename, "%s%d", "x_", iteration );
 		if( WRITE_X_KI ) 
@@ -7233,6 +7058,8 @@ void DROP_partial_tx( const int num_histories )
 			transfer_image_device_to_host();
 			array_2_disk(iterate_filename, OUTPUT_DIRECTORY, OUTPUT_FOLDER, x_h, COLUMNS, ROWS, SLICES, NUM_VOXELS, true ); 
 		}
+		execution_time_DROP_iteration = timer( STOP, begin_DROP_iteration, "for DROP iteration");			
+		execution_times_DROP_iterations.push_back(execution_time_DROP_iteration);
 	}
 }
 // DROP_TX_MODE = PARTIAL_TX_PREALLOCATED, MLP_ALGORITHM = STANDARD
@@ -7244,18 +7071,13 @@ void DROP_partial_tx_preallocated( const int num_histories )
 	int column_blocks = static_cast<int>(COLUMNS/VOXELS_PER_THREAD);
 	dim3 dimBlock( SLICES );
 	dim3 dimGrid( column_blocks, ROWS );
-
-	//DROP_full_tx_setup(reconstruction_histories);
 	DROP_allocations(DROP_BLOCK_SIZE);
 	for(int iteration = 1; iteration <= ITERATIONS ; ++iteration) 
 	{	    
-		//i = 0;
 		printf("Performing iteration %u of image reconstruction\n", iteration);
-		//transfer_intermediate_results_host_to_device( reconstruction_histories );
 		remaining_histories = num_histories;
 		start_position = 0;
-		//begin_DROP_iteration = clock();
-		timer( START, begin_DROP_iteration, end_DROP_iteration, execution_time_DROP_iteration, "for DROP iteration");	
+		timer( START, begin_DROP_iteration, "for DROP iteration");	
 		while( remaining_histories > 0 )
 		{
 			if( remaining_histories > DROP_BLOCK_SIZE )
@@ -7282,13 +7104,6 @@ void DROP_partial_tx_preallocated( const int num_histories )
 			remaining_histories -= DROP_BLOCK_SIZE;
 			start_position		+= DROP_BLOCK_SIZE;
 		}
-		//end_DROP_iteration = clock();
-		//clock_cycles_DROP_iteration = end_DROP_iteration - begin_DROP_iteration;
-		//execution_time_DROP_iteration = static_cast<double>(clock_cycles_DROP_iteration) / CLOCKS_PER_SEC;
-		//printf( "Execution time for iteration %d =  %lf seconds\n", iteration, execution_time_DROP_iteration );
-		timer( STOP, begin_DROP_iteration, end_DROP_iteration, execution_time_DROP_iteration, "for DROP iteration");
-		execution_times_DROP_iterations.push_back(execution_time_DROP_iteration);
-		
 		// Transfer the updated image to the host and write it to disk
 		sprintf(iterate_filename, "%s%d", "x_", iteration );
 		if( WRITE_X_KI ) 
@@ -7296,6 +7111,8 @@ void DROP_partial_tx_preallocated( const int num_histories )
 			transfer_image_device_to_host();
 			array_2_disk(iterate_filename, OUTPUT_DIRECTORY, OUTPUT_FOLDER, x_h, COLUMNS, ROWS, SLICES, NUM_VOXELS, true ); 
 		}
+		execution_time_DROP_iteration = timer( STOP, begin_DROP_iteration, "for DROP iteration");	
+		execution_times_DROP_iterations.push_back(execution_time_DROP_iteration);
 	}
 	DROP_deallocations();
 }
@@ -7313,13 +7130,10 @@ void DROP_full_tx_tabulated(const int num_histories)
 	DROP_host_2_device( start_position, num_histories);
 	for(int iteration = 1; iteration <= ITERATIONS ; ++iteration) 
 	{	    
-		//i = 0;
 		printf("Performing iteration %u of image reconstruction\n", iteration);
-		//transfer_intermediate_results_host_to_device( reconstruction_histories );
 		remaining_histories = num_histories;
 		start_position = 0;
-		//begin_DROP_iteration = clock();
-		timer( START, begin_DROP_iteration, end_DROP_iteration, execution_time_DROP_iteration, "for DROP iteration");	
+		timer( START, begin_DROP_iteration, "for DROP iteration");	
 		while( remaining_histories > 0 )
 		{
 			if( remaining_histories > DROP_BLOCK_SIZE )
@@ -7327,8 +7141,6 @@ void DROP_full_tx_tabulated(const int num_histories)
 			else
 				histories_2_process = remaining_histories;	
 			num_blocks = static_cast<int>( (histories_2_process - 1 + HISTORIES_PER_BLOCK*HISTORIES_PER_THREAD) / (HISTORIES_PER_BLOCK*HISTORIES_PER_THREAD) );  
-			//begin_update_calcs = clock();
-			
 			block_update_GPU_tabulated<<< num_blocks, HISTORIES_PER_BLOCK >>>
 			( 
 				x_d, x_entry_d, y_entry_d, z_entry_d, xy_entry_angle_d, xz_entry_angle_d, x_exit_d, y_exit_d, z_exit_d,  xy_exit_angle_d, 
@@ -7348,8 +7160,6 @@ void DROP_full_tx_tabulated(const int num_histories)
 			remaining_histories -= DROP_BLOCK_SIZE;
 			start_position		+= DROP_BLOCK_SIZE;
 		}
-		timer( STOP, begin_DROP_iteration, end_DROP_iteration, execution_time_DROP_iteration, "for DROP iteration");
-		execution_times_DROP_iterations.push_back(execution_time_DROP_iteration);
 		
 		// Transfer the updated image to the host and write it to disk
 		sprintf(iterate_filename, "%s%d", "x_", iteration );
@@ -7358,6 +7168,8 @@ void DROP_full_tx_tabulated(const int num_histories)
 			transfer_image_device_to_host();
 			array_2_disk(iterate_filename, OUTPUT_DIRECTORY, OUTPUT_FOLDER, x_h, COLUMNS, ROWS, SLICES, NUM_VOXELS, true ); 
 		}
+		execution_time_DROP_iteration = timer( STOP, begin_DROP_iteration, "for DROP iteration");	
+		execution_times_DROP_iterations.push_back(execution_time_DROP_iteration);
 	}
 	DROP_deallocations();
 }
@@ -7371,16 +7183,12 @@ void DROP_partial_tx_tabulated( const int num_histories )
 	dim3 dimBlock( SLICES );
 	dim3 dimGrid( column_blocks, ROWS );
 
-	//DROP_full_tx_setup(reconstruction_histories);
 	for(int iteration = 1; iteration <= ITERATIONS ; ++iteration) 
 	{	    
-		//i = 0;
 		printf("Performing iteration %u of image reconstruction\n", iteration);
-		//transfer_intermediate_results_host_to_device( reconstruction_histories );
 		remaining_histories = num_histories;
 		start_position = 0;
-		//begin_DROP_iteration = clock();
-		timer( START, begin_DROP_iteration, end_DROP_iteration, execution_time_DROP_iteration, "for DROP iteration");	
+		timer( START, begin_DROP_iteration, "for DROP iteration");	
 		while( remaining_histories > 0 )
 		{
 			if( remaining_histories > DROP_BLOCK_SIZE )
@@ -7411,13 +7219,6 @@ void DROP_partial_tx_tabulated( const int num_histories )
 			remaining_histories -= DROP_BLOCK_SIZE;
 			start_position		+= DROP_BLOCK_SIZE;
 		}
-		//end_DROP_iteration = clock();
-		//clock_cycles_DROP_iteration = end_DROP_iteration - begin_DROP_iteration;
-		//execution_time_DROP_iteration = static_cast<double>(clock_cycles_DROP_iteration) / CLOCKS_PER_SEC;
-		//printf( "Execution time for iteration %d =  %lf seconds\n", iteration, execution_time_DROP_iteration );
-		timer( STOP, begin_DROP_iteration, end_DROP_iteration, execution_time_DROP_iteration, "for DROP iteration");
-		execution_times_DROP_iterations.push_back(execution_time_DROP_iteration);
-		
 		// Transfer the updated image to the host and write it to disk
 		sprintf(iterate_filename, "%s%d", "x_", iteration );
 		if( WRITE_X_KI ) 
@@ -7425,6 +7226,8 @@ void DROP_partial_tx_tabulated( const int num_histories )
 			transfer_image_device_to_host();
 			array_2_disk(iterate_filename, OUTPUT_DIRECTORY, OUTPUT_FOLDER, x_h, COLUMNS, ROWS, SLICES, NUM_VOXELS, true ); 
 		}
+		execution_time_DROP_iteration = timer( STOP, begin_DROP_iteration, "for DROP iteration");	
+		execution_times_DROP_iterations.push_back(execution_time_DROP_iteration);
 	}
 }
 // DROP_TX_MODE = PARTIAL_TX_PREALLOCATED, MLP_ALGORITHM = TABULATED
@@ -7447,7 +7250,8 @@ void DROP_partial_tx_preallocated_tabulated( const int num_histories )
 		remaining_histories = num_histories;
 		start_position = 0;
 		//begin_DROP_iteration = clock();
-		timer( START, begin_DROP_iteration, end_DROP_iteration, execution_time_DROP_iteration, "for DROP iteration");	
+		//timer( START, begin_DROP_iteration, end_DROP_iteration, execution_time_DROP_iteration, "for DROP iteration");	
+		timer( START, begin_DROP_iteration, "for DROP iteration");	
 		while( remaining_histories > 0 )
 		{
 			if( remaining_histories > DROP_BLOCK_SIZE )
@@ -7479,8 +7283,6 @@ void DROP_partial_tx_preallocated_tabulated( const int num_histories )
 		//clock_cycles_DROP_iteration = end_DROP_iteration - begin_DROP_iteration;
 		//execution_time_DROP_iteration = static_cast<double>(clock_cycles_DROP_iteration) / CLOCKS_PER_SEC;
 		//printf( "Execution time for iteration %d =  %lf seconds\n", iteration, execution_time_DROP_iteration );
-		timer( STOP, begin_DROP_iteration, end_DROP_iteration, execution_time_DROP_iteration, "for DROP iteration");
-		execution_times_DROP_iterations.push_back(execution_time_DROP_iteration);
 		
 		// Transfer the updated image to the host and write it to disk
 		sprintf(iterate_filename, "%s%d", "x_", iteration );
@@ -7489,6 +7291,8 @@ void DROP_partial_tx_preallocated_tabulated( const int num_histories )
 			transfer_image_device_to_host();
 			array_2_disk(iterate_filename, OUTPUT_DIRECTORY, OUTPUT_FOLDER, x_h, COLUMNS, ROWS, SLICES, NUM_VOXELS, true ); 
 		}
+		execution_time_DROP_iteration = timer( STOP, begin_DROP_iteration, "for DROP iteration");	
+		execution_times_DROP_iterations.push_back(execution_time_DROP_iteration);		
 	}
 	DROP_deallocations();	
 }
@@ -7500,7 +7304,7 @@ void image_reconstruction_GPU()
 	 // #ifdef PROFILER
 	 // cudaProfilerStart();
 	 // #endif
-	  cudaSetDevice(0);
+	  //cudaSetDevice(0);
 	  char iterate_filename[256];
 	  clock_t begin1, end1; //begin2, end2;
 	  float time_spent1; //time_spent2;
@@ -7536,8 +7340,6 @@ void image_reconstruction_GPU()
 	  
 	  // Allocate GPU memory for x, hull, x_update, and S
 	  transfer_reconstruction_images();
-	  
-	  reconstruction_cuts_allocations(MAX_ENDPOINTS_HISTORIES);
 
 	  puts("Starting collecting MLP endpoints...");
 	  int remaining_histories = post_cut_histories, start_position = 0, histories_2_process = 0;
@@ -7553,13 +7355,12 @@ void image_reconstruction_GPU()
 			else
 				histories_2_process = remaining_histories;
 			
-			//reconstruction_cuts_partial_tx( start_position, histories_2_process );
-			reconstruction_cuts_partial_tx_preallocated( start_position,histories_2_process );
+			reconstruction_cuts_partial_tx( start_position, histories_2_process );
 			
 			remaining_histories -= MAX_ENDPOINTS_HISTORIES;
 			start_position		+= MAX_ENDPOINTS_HISTORIES;
 		}
-	  reconstruction_cuts_deallocations();
+		
 	  puts("Statistical cuts complete.");
 	  end1 = clock();
 	  time_spent1 = (float)(end1 - begin1) / CLOCKS_PER_SEC;
@@ -7644,11 +7445,11 @@ void image_reconstruction_GPU()
 	//dim3 dimGrid( COLUMNS/VOXELS_PER_THREAD, ROWS );
 	
 	
-	//exit(0);
+	
 	generate_trig_tables();
 	generate_scattering_coefficient_table();
 	generate_polynomial_tables();
-	tables_2_GPU();
+	MLP_lookup_table_2_GPU();
 	
 	/*drop_cuts_preallocations( BLOCK_SIZE_RECON );
 	
@@ -7920,7 +7721,7 @@ void image_reconstruction_GPU_tabulated()
 	//import_scattering_coefficient_table();
 	generate_polynomial_tables();
 	//import_polynomial_tables();
-	tables_2_GPU();
+	MLP_lookup_table_2_GPU();
 	// Preallocate GPU memory for DROP reconstruction
 	drop_cuts_preallocations(DROP_BLOCK_SIZE);
 	for(int iteration = 1; iteration <= ITERATIONS ; ++iteration) 
@@ -8079,46 +7880,50 @@ void image_reconstruction_GPU_tabulated()
 }
 void image_reconstruction_GPU_testing() 
 {  
+	char statement[256];
 	/***********************************************************************************************************************************************************************************************************************/
 	/****************************************************************** Find MLP endpoints and remove data for protons that did not enter and/or exit the hull *************************************************************/
 	/***********************************************************************************************************************************************************************************************************************/
-	printf("Starting collecting MLP endpoints and removing unnecessary data for the %d histories remaining after statistical data cuts...", post_cut_histories);
-	timer( START, begin_endpoints, end_endpoints, execution_time_endpoints, "for finding MLP endpoints");	
+	sprintf(statement, "Determining if and where each of the protons enters/exits the hull to (1) define the endpoints of MLP and (2) remove protons that missed the hull from consideration in reconstruction");
+	print_section_header( statement, '-' );
+	timer( START, begin_endpoints, "for finding MLP endpoints");	
 	int remaining_histories = post_cut_histories, start_position = 0, histories_2_process = 0;
-	cudaError_t cudaStatus;
 	reconstruction_histories = 0;
-	//post_cut_histories = 50000000;
-	//num_histories = 60000000;
-	
+
+	cudaError_t cudaStatus = cudaGetLastError();
+	if (cudaStatus != cudaSuccess) 
+		printf("Before image reconstruction Error: %s\n", cudaGetErrorString(cudaStatus));
+		
 	first_MLP_voxel_vector.resize( post_cut_histories ); 
 	reconstruction_cuts_hull_transfer();		// Free hull_d which may not be aligned well on the GPU and reallocate/transfer it to GPU again
 
-	// Reconstruction_cuts with ALL data transfered to the GPU before launching kernel
+	puts("Collecting MLP endpoints...");
 	if( ENDPOINTS_TX_MODE == FULL_TX )
 	{
-		// intersected_hull_h/d used to identify protons hitting/missing hull
 		if( ENDPOINTS_ALG == BOOL )
 		{
+			puts("intersected_hull_h/d used to identify protons hitting/missing hull");
 			reconstruction_cuts_allocations(post_cut_histories);
 			reconstruction_cuts_host_2_device( 0, post_cut_histories );  
 			reconstruction_cuts_full_tx( post_cut_histories );
 			reconstruction_cuts_deallocations();
 		}
-		// first_MLP_voxel_vector used to identify protons hitting/missing hull
+		// 
 		else if( ENDPOINTS_ALG == NO_BOOL )
 		{
+			puts("first_MLP_voxel_vector used to identify protons hitting/missing hull");
 			reconstruction_cuts_allocations_nobool(post_cut_histories);
 			reconstruction_cuts_host_2_device_nobool( 0, post_cut_histories );  
 			reconstruction_cuts_full_tx_nobool( post_cut_histories );
 			reconstruction_cuts_deallocations_nobool();
 		}
 	}
-	// Reconstruction_cuts with partial data transfers and GPU arrays allocated/freed each kernel launch
 	else if( ENDPOINTS_TX_MODE == PARTIAL_TX )
 	{
-		// intersected_hull_h/d used to identify protons hitting/missing hull
+		puts("Reconstruction_cuts with partial data transfers and GPU arrays allocated/freed each kernel launch");
 		if( ENDPOINTS_ALG == BOOL )
 		{
+			puts("intersected_hull_h/d used to identify protons hitting/missing hull");
 			while( remaining_histories > 0 )
 			{
 				if( remaining_histories > MAX_ENDPOINTS_HISTORIES )
@@ -8130,9 +7935,9 @@ void image_reconstruction_GPU_testing()
 				start_position		+= MAX_ENDPOINTS_HISTORIES;
 			}
 		}
-		// first_MLP_voxel_vector used to identify protons hitting/missing hull
 		else if( ENDPOINTS_ALG == NO_BOOL )
 		{
+			puts("first_MLP_voxel_vector used to identify protons hitting/missing hull");
 			while( remaining_histories > 0 )
 			{
 				if( remaining_histories > MAX_ENDPOINTS_HISTORIES )
@@ -8145,12 +7950,12 @@ void image_reconstruction_GPU_testing()
 			}	
 		}
 	}
-	// Reconstruction_cuts with partial data transfers and preallocated and reused GPU arrays
 	else if( ENDPOINTS_TX_MODE == PARTIAL_TX_PREALLOCATED )
 	{
-		// intersected_hull_h/d used to identify protons hitting/missing hull
+		puts("Reconstruction_cuts with partial data transfers and preallocated and reused GPU arrays");
 		if( ENDPOINTS_ALG == BOOL )
 		{
+			puts("intersected_hull_h/d used to identify protons hitting/missing hull");
 			reconstruction_cuts_allocations(MAX_ENDPOINTS_HISTORIES); 
 			while( remaining_histories > 0 )
 			{
@@ -8164,9 +7969,9 @@ void image_reconstruction_GPU_testing()
 			}
 			reconstruction_cuts_deallocations();
 		}
-		// first_MLP_voxel_vector used to identify protons hitting/missing hull
 		else if( ENDPOINTS_ALG == NO_BOOL )
 		{
+			puts("first_MLP_voxel_vector used to identify protons hitting/missing hull");
 			reconstruction_cuts_allocations_nobool(MAX_ENDPOINTS_HISTORIES); 
 			while( remaining_histories > 0 )
 			{
@@ -8181,9 +7986,10 @@ void image_reconstruction_GPU_testing()
 			reconstruction_cuts_deallocations_nobool();
 		}
 	}
-	printf("Reconsruction Cuts Complete: protons that intersected the hull and will be used for reconstruction = %d\n", reconstruction_histories);
-	
-	timer( STOP, begin_endpoints, end_endpoints, execution_time_endpoints, "for finding MLP endpoints");
+	sprintf(statement, "Reconsruction Cuts Complete.");
+	print_section_exit( statement, SECTION_EXIT_STRING );
+	printf("Protons that intersected the hull and will be used for reconstruction = %d\n", reconstruction_histories);
+	execution_time_endpoints = timer( STOP, begin_endpoints, "for finding MLP endpoints");
 	
 	// Reduce the size of the vectors to reconstruction_histories and shrink their capacity to match
 	first_MLP_voxel_vector.resize( reconstruction_histories );
@@ -8193,7 +7999,7 @@ void image_reconstruction_GPU_testing()
 	/***********************************************************************************************************************************************************************************************************************/
 	/********************************************************************************************* Initialize Reconstructed Image ******************************************************************************************/
 	/***********************************************************************************************************************************************************************************************************************/
-	timer( START, begin_init_image, end_init_image, execution_time_init_image, "for initializing reconstructed image x");
+	timer( START, begin_init_image, "for initializing reconstructed image x");
 	
 	DROP_setup_update_arrays();		// allocate GPU memory for x, x_update, and S and transfer initial iterate x_0 to x_d
 	
@@ -8205,13 +8011,14 @@ void image_reconstruction_GPU_testing()
 	cudaStatus = cudaGetLastError();
 	if (cudaStatus != cudaSuccess) 
 		printf("Error: %s\n", cudaGetErrorString(cudaStatus));
-
-	timer( STOP, begin_init_image, end_init_image, execution_time_init_image, "for initializing reconstructed image x");	
+	execution_time_init_image = timer( STOP, begin_init_image, "for initializing reconstructed image x");	
 	/***********************************************************************************************************************************************************************************************************************/
 	/************************************************************************************************ Image Reconstruction *************************************************************************************************/
 	/***********************************************************************************************************************************************************************************************************************/
-	timer( START, begin_DROP, end_DROP, execution_time_DROP, "for all iterations of DROP");	
-
+	sprintf(statement, "Performing MLP and image reconstrution");
+	print_section_header( statement, '-' );
+	timer( START, begin_DROP, "for all iterations of DROP");	
+	
 	// Calculate MLP explicitly
 	if( MLP_ALGORITHM == STANDARD )
 	{
@@ -8235,15 +8042,9 @@ void image_reconstruction_GPU_testing()
 	else if( MLP_ALGORITHM == TABULATED )
 	{
 		// Generate MLP lookup tables and transfer these to the GPU
-		timer( START, begin_tables, end_tables, execution_time_tables, "for generating MLP lookup tables and transferring them to the GPU");	
-		generate_trig_tables();
-		generate_scattering_coefficient_table();
-		generate_polynomial_tables();
-		//import_trig_tables();
-		//import_scattering_coefficient_table();
-		//import_polynomial_tables();
-		tables_2_GPU();
-		timer( STOP, begin_tables, end_tables, execution_time_tables, "for generating MLP lookup tables and transferring them to the GPU");	
+		timer( START, begin_tables, "for generating MLP lookup tables and transferring them to the GPU");	
+		generate_MLP_lookup_tables();
+		execution_time_tables = timer( STOP, begin_tables, "for generating MLP lookup tables and transferring them to the GPU");	
 		
 		// Transfer data for ALL reconstruction_histories before beginning image reconstruction, using the MLP lookup tables each time
 		if( DROP_TX_MODE == FULL_TX )
@@ -8260,10 +8061,13 @@ void image_reconstruction_GPU_testing()
 		{
 			DROP_partial_tx_preallocated_tabulated( reconstruction_histories );
 		}// end: else if( DROP_TX_MODE == PARTIAL_TX_PREALLOCATED )
-		free_GPU_tables();
+		free_MLP_lookup_tables();
 	}	// end: else if( MLP_ALGORITHM == TABULATED )
 	DROP_free_update_arrays();
-	timer( STOP, begin_DROP, end_DROP, execution_time_DROP, "for all iterations of DROP");
+
+	sprintf(statement, "Image reconstruction complete: ");
+	print_section_exit( statement, SECTION_EXIT_STRING );
+	execution_time_DROP = timer( STOP, begin_DROP, "for all iterations of DROP");
 }
 /***********************************************************************************************************************************************************************************************************************/
 /********************************************************************************************* Image Reconstruction (host) *********************************************************************************************/
@@ -8314,20 +8118,31 @@ void import_initial_iterate()
 //	fclose(read_input_hull);
 //	puts("Finished reading image reconstruction hull from disk.");
 }
+void initial_iterate_generate_hybrid()
+{
+	for( int voxel = 0; voxel < NUM_VOXELS; voxel++ )
+	{
+		if( hull_h[voxel] == true )
+			x_h[voxel] = FBP_image_h[voxel];
+		else
+			x_h[voxel] = 0.0;
+	}
+}
 void define_initial_iterate()
 {
 	x_h = (float*) calloc( NUM_VOXELS, sizeof(float) );
 
 	switch( X_0 )
 	{
-		case X_HULL		: std::copy( hull_h, hull_h + NUM_VOXELS, x_h );													break;
-		case FBP_IMAGE	: x_h = FBP_image_h;																					break;
-		case HYBRID		: std::transform(FBP_image_h, FBP_image_h + NUM_VOXELS, hull_h, x_h, std::multiplies<float>() );		break;
-		case IMPORT		: sprintf( INPUT_ITERATE_PATH, "%s%s/%s", OUTPUT_DIRECTORY, OUTPUT_FOLDER, INPUT_ITERATE_FILENAME );
-						  import_image( x_h, INPUT_ITERATE_PATH );																break;
-		case ZEROS		: break;
-		default			: puts("ERROR: Invalid initial iterate selected");
-						  exit(1);
+		case X_HULL		:	std::copy( hull_h, hull_h + NUM_VOXELS, x_h );															break;
+		case FBP_IMAGE	:	x_h = FBP_image_h;																						break;
+		case HYBRID		:	initial_iterate_generate_hybrid();																		break;
+							//std::transform(FBP_image_h, FBP_image_h + NUM_VOXELS, hull_h, x_h, std::multiplies<float>() );		break;
+		case IMPORT		:	sprintf( INPUT_ITERATE_PATH, "%s%s/%s", OUTPUT_DIRECTORY, OUTPUT_FOLDER, INPUT_ITERATE_FILENAME );
+							import_image( x_h, INPUT_ITERATE_PATH );																break;
+		case ZEROS		:	break;
+		default			:	puts("ERROR: Invalid initial iterate selected");
+							exit(1);
 	}
 
 	//if( AVG_FILTER_ITERATE )
@@ -8527,17 +8342,6 @@ double EffectiveChordLength(double abs_angle_t, double abs_angle_v)
 	
 	return VOXEL_WIDTH*chord_length_2D*chord_length_3D;
 	 
-}
-double radial_lambda( double radius_squared )
-{
-	//	1 - a*r(i)^2 DECAY_FACTOR
-	//exp(-a*r)  EXPONENTIAL_DECAY
-	//exp(-a*r^2)  EXPONENTIAL_SQD_DECAY
-
-	return LAMBDA * ( 1 - DECAY_FACTOR * radius_squared );
-	//return LAMBDA * exp( -EXPONENTIAL_DECAY * sqrt( radius_squared ) );
-	//return LAMBDA * exp( -EXPONENTIAL_SQD_DECAY * radius_squared );
-
 }
 void image_reconstruction()
 {
@@ -8747,17 +8551,17 @@ template< typename X> double update_vector_multiplier2( double bi, double mean_c
 template<typename X> void update_iterate2( double bi, double mean_chord_length, X*& x_k, unsigned int*& voxels_intersected, unsigned int num_intersections )
 {
 	// x(K+1) = x(k) + [ ( bi - <ai, x(k)> ) / <ai, ai> ] ai =  x(k) + [ ( bi - <ai, x(k)> ) / ||ai||^2 ] ai 
-	double ai_multiplier = update_vector_multiplier2( bi, mean_chord_length, x_k, voxels_intersected, num_intersections );
+	//double ai_multiplier = update_vector_multiplier2( bi, mean_chord_length, x_k, voxels_intersected, num_intersections );
 	//cout << "ai_multiplier = " << ai_multiplier << endl;
 	//int middle_intersection = num_intersections / 2;
-	unsigned int voxel;
-	double radius_squared;
-	double scale_factor = LAMBDA * ai_multiplier * mean_chord_length;
+	//unsigned int voxel;
+	//double radius_squared;
+	//double scale_factor = LAMBDA * ai_multiplier * mean_chord_length;
 	//double scaled_lambda;
 	for( unsigned int intersection = 0; intersection < num_intersections; intersection++)
 	{
-		voxel = voxels_intersected[intersection];
-		radius_squared = voxel_2_radius_squared( voxel );
+		//voxel = voxels_intersected[intersection];
+		//radius_squared = voxel_2_radius_squared( voxel );
 		//	1 - a*r(i)^2 DECAY_FACTOR
 		//exp(-a*r)  EXPONENTIAL_DECAY
 		//exp(-a*r^2)  EXPONENTIAL_SQD_DECAY
@@ -8766,7 +8570,7 @@ template<typename X> void update_iterate2( double bi, double mean_chord_length, 
 		// LAMBDA * exp( -EXPONENTIAL_DECAY * sqrt( radius_squared ) );
 		// LAMBDA * exp( -EXPONENTIAL_SQD_DECAY * radius_squared );
 		//x_k[voxel] +=  scale_factor * ( 1 - DECAY_FACTOR * radius_squared );
-		x_k[voxel] +=  scale_factor * exp( -EXPONENTIAL_SQD_DECAY * radius_squared );
+		//x_k[voxel] +=  scale_factor * exp( -EXPONENTIAL_SQD_DECAY * radius_squared );
 		//x_k[voxels_intersected[intersection]] += (LAMBDA / sqrt( abs(middle_intersection - intersection) + 1.0) ) * ai_multiplier * mean_chord_length;
 		//x_k[voxels_intersected[intersection]] += (LAMBDA * max(1.0, sqrt(bi) ) ) * ai_multiplier * mean_chord_length;
 	}
@@ -9057,11 +8861,11 @@ void DROP_update3( float*& x_k, double*& x_update, unsigned int*& block_voxels, 
 	unsigned int count;
 	for( unsigned int block_intersection = 0; block_intersection < block_intersections; block_intersection++ )
 	{
-		count = std::count(block_voxels, block_voxels + block_intersections, block_voxels[block_intersection] );
+		count = static_cast<unsigned int>(std::count(block_voxels, block_voxels + block_intersections, block_voxels[block_intersection] ));
 		x_k[block_voxels[block_intersection]] += x_update[block_voxels[block_intersection]] / count;
 		//x_update[block_intersection] = 0;
 	}
-	memset(x_update, 0.0, NUM_VOXELS );
+	memset(x_update, 0, NUM_VOXELS );
 	block_intersections = 0;
 }
 void DROP_blocks2
@@ -9561,28 +9365,243 @@ template<typename T> void path_data_2_disk(char* data_filename, FILE* pFile, uns
 	fputc ('\n',pFile);
 	fclose (pFile);
 }
-void execution_times_2_disk()
+char((&current_MMDD( char(&date_MMDD)[5]))[5])
+{
+	time_t rawtime;
+	time (&rawtime);
+	struct tm * timeinfo = gmtime (&rawtime);
+	strftime (date_MMDD,11,"%m%d", timeinfo);
+	return date_MMDD;
+}
+char((&current_MMDDYYYY( char(&date_MMDDYYYY)[9]))[9])
+{
+	time_t rawtime;
+	time (&rawtime);
+	struct tm * timeinfo = gmtime (&rawtime);
+	strftime (date_MMDDYYYY,11,"%m%d%Y", timeinfo);
+	return date_MMDDYYYY;
+}
+void execution_times_2_txt()
+{
+	char ENDPOINTS_TX_MODE_STRING[32];
+	char ENDPOINTS_ALG_STRING[32];
+	char DROP_TX_MODE_STRING[32];
+	char MLP_ALGORITHM_STRING[32];
+
+	switch( ENDPOINTS_TX_MODE )
+	{
+		case FULL_TX:					sprintf(ENDPOINTS_TX_MODE_STRING, "%s", FULL_TX_STRING);						break;
+		case PARTIAL_TX:				sprintf(ENDPOINTS_TX_MODE_STRING, "%s", PARTIAL_TX_STRING);						break;
+		case PARTIAL_TX_PREALLOCATED:	sprintf(ENDPOINTS_TX_MODE_STRING, "%s", PARTIAL_TX_PREALLOCATED_STRING);		break;		
+	}
+	switch( DROP_TX_MODE )
+	{
+		case FULL_TX:					sprintf(DROP_TX_MODE_STRING, "%s", FULL_TX_STRING);						break;
+		case PARTIAL_TX:				sprintf(DROP_TX_MODE_STRING, "%s", PARTIAL_TX_STRING);						break;
+		case PARTIAL_TX_PREALLOCATED:	sprintf(DROP_TX_MODE_STRING, "%s", PARTIAL_TX_PREALLOCATED_STRING);		break;
+	}
+	switch( ENDPOINTS_ALG )
+	{
+		case BOOL:		sprintf(ENDPOINTS_ALG_STRING, "%s", BOOL_STRING);					break;
+		case NO_BOOL:	sprintf(ENDPOINTS_ALG_STRING, "%s", NO_BOOL_STRING);				break;
+	}
+	switch( MLP_ALGORITHM )
+	{
+		case TABULATED:		sprintf(MLP_ALGORITHM_STRING, "%s", TABULATED_STRING);			break;
+		case STANDARD:		sprintf(MLP_ALGORITHM_STRING, "%s", STANDARD_STRING);			break;
+	}
+
+	int i = 0;
+	char execution_times_path[256];
+	char execution_date[9];
+	current_MMDDYYYY( execution_date);
+	//sprintf(execution_times_path, "%s//%s.txt", GLOBAL_RESULTS_PATH, EXECUTION_TIMES_FILENAME);
+	sprintf(execution_times_path, "%s%s//%s.txt", OUTPUT_DIRECTORY, OUTPUT_FOLDER, EXECUTION_TIMES_FILENAME);
+	puts(execution_times_path);
+	FILE* execution_times_file = fopen( execution_times_path, "w" );
+	fprintf(execution_times_file, "execution_date = %s\n",				execution_date						);	// 1
+	fprintf(execution_times_file, "Executed By Blake Schultze, "										);	// 2
+	fprintf(execution_times_file, "INPUT_DIRECTORY = %s\n",				INPUT_DIRECTORY						);	// 3
+	fprintf(execution_times_file, "INPUT_FOLDER = %s\n",				INPUT_FOLDER						);	// 4
+	fprintf(execution_times_file, "OUTPUT_DIRECTORY = %s\n",				OUTPUT_DIRECTORY					);	// 5
+	fprintf(execution_times_file, "OUTPUT_FOLDER = %s\n",				OUTPUT_FOLDER						);	// 6
+	fprintf(execution_times_file, "execution_time_data_reads = %6.6lf\n",			execution_time_data_reads			);	// 7
+	fprintf(execution_times_file, "execution_time_preprocessing = %6.6lf\n",			execution_time_preprocessing		);	// 8
+	fprintf(execution_times_file, "execution_time_endpoints = %6.6lf\n",			execution_time_endpoints			);	// 9
+	fprintf(execution_times_file, "execution_time_tables = %6.6lf\n",			execution_time_tables				);	// 10
+	fprintf(execution_times_file, "execution_time_init_image = %6.6lf\n",			execution_time_init_image			);	// 11
+	fprintf(execution_times_file, "execution_time_DROP = %6.6lf\n",			execution_time_DROP					);	// 12
+	for( i = 0; i < execution_times_DROP_iterations.size(); i++ )
+		fprintf(execution_times_file, "execution_times_DROP_iterations %d = %6.6lf\n", i,	execution_times_DROP_iterations[i]	);	// 13-24													
+	fprintf(execution_times_file, "execution_time_reconstruction = %6.6lf\n",			execution_time_reconstruction		);	// 25
+	fprintf(execution_times_file, "execution_time_program = %6.6lf\n",			execution_time_program				);	// 26
+
+	fprintf(execution_times_file, "THREADS_PER_BLOCK = %d\n",				THREADS_PER_BLOCK					);	// 27
+	fprintf(execution_times_file, "ENDPOINTS_TX_MODE_STRING = %s\n",				ENDPOINTS_TX_MODE_STRING			);	// 28
+	fprintf(execution_times_file, "ENDPOINTS_ALG_STRING = %s\n",				ENDPOINTS_ALG_STRING				);	// 29
+	fprintf(execution_times_file, "MAX_ENDPOINTS_HISTORIES = %d\n",				MAX_ENDPOINTS_HISTORIES				);	// 30
+	fprintf(execution_times_file, "ENDPOINTS_PER_BLOCK = %d\n",				ENDPOINTS_PER_BLOCK					);	// 31
+	fprintf(execution_times_file, "ENDPOINTS_PER_THREAD = %d\n",				ENDPOINTS_PER_THREAD				);	// 32
+	fprintf(execution_times_file, "DROP_TX_MODE_STRING = %s\n",				DROP_TX_MODE_STRING					);	// 33
+	fprintf(execution_times_file, "MLP_ALGORITHM_STRING = %s\n",				MLP_ALGORITHM_STRING				);	// 34
+	fprintf(execution_times_file, "HISTORIES_PER_BLOCK = %d\n",				HISTORIES_PER_BLOCK					);	// 35
+	fprintf(execution_times_file, "HISTORIES_PER_THREAD = %d\n",				HISTORIES_PER_THREAD				);	// 36
+	fprintf(execution_times_file, "VOXELS_PER_THREAD = %d\n",				VOXELS_PER_THREAD					);	// 37
+	fprintf(execution_times_file, "LAMBDA = %6.6lf\n",			LAMBDA								);	// 38
+	fprintf(execution_times_file, "DROP_BLOCK_SIZE = %d\n",				DROP_BLOCK_SIZE						);	// 39
+	fprintf(execution_times_file, "TRIG_TABLE_MIN = %6.6lf\n",			TRIG_TABLE_MIN						);	// 40
+	fprintf(execution_times_file, "TRIG_TABLE_MAX = %6.6lf\n",			TRIG_TABLE_MAX						);	// 41
+	fprintf(execution_times_file, "TRIG_TABLE_STEP = %6.6lf\n",			TRIG_TABLE_STEP						);	// 42
+	fprintf(execution_times_file, "DEPTH_TABLE_RANGE = %6.6lf\n",			DEPTH_TABLE_RANGE					);	// 43
+	fprintf(execution_times_file, "DEPTH_TABLE_STEP = %6.6lf\n",			DEPTH_TABLE_STEP					);	// 44
+	fprintf(execution_times_file, "POLY_TABLE_RANGE = %6.6lf\n",			POLY_TABLE_RANGE					);	// 45
+	fprintf(execution_times_file, "POLY_TABLE_STEP = %6.6lf\n",			POLY_TABLE_STEP						);	// 46
+	fprintf(execution_times_file, "\n",					POLY_TABLE_STEP						);	// end line, go to beginning of next entry
+
+	fclose(execution_times_file);
+	//Execution Date	Executed By	INPUT_DIRECTORY	INPUT_FOLDER	OUTPUT_DIRECTORY	OUTPUT_FOLDER	preprocessing	endpoints	tables	init_image	DROP_total	iteration 1	iteration 2	iteration 3	iteration 4	iteration 5	iteration 6	iteration 7	iteration 8	iteration 9	iteration 10	iteration 11	iteration 12	reconstruction	program	THREADS_PER_BLOCK	ENDPOINTS_TX_MODE	ENDPOINTS_ALG	MAX_ENDPOINTS_HISTORIES	ENDPOINTS_PER_BLOCK	ENDPOINTS_PER_THREAD	DROP_TX_MODE	MLP_ALGORITHM	HISTORIES_PER_BLOCK	HISTORIES_PER_THREAD	VOXELS_PER_THREAD	LAMBDA	DROP_BLOCK_SIZE	TRIG_TABLE_MIN	TRIG_TABLE_MAX	TRIG_TABLE_STEP	DEPTH_TABLE_RANGE	DEPTH_TABLE_STEP	POLY_TABLE_RANGE	POLY_TABLE_STEP
+}
+void execution_times_2_csv()
+{
+	char ENDPOINTS_TX_MODE_STRING[32];
+	char ENDPOINTS_ALG_STRING[32];
+	char DROP_TX_MODE_STRING[32];
+	char MLP_ALGORITHM_STRING[32];
+
+	switch( ENDPOINTS_TX_MODE )
+	{
+		case FULL_TX:					sprintf(ENDPOINTS_TX_MODE_STRING, "%s", FULL_TX_STRING);						break;
+		case PARTIAL_TX:				sprintf(ENDPOINTS_TX_MODE_STRING, "%s", PARTIAL_TX_STRING);						break;
+		case PARTIAL_TX_PREALLOCATED:	sprintf(ENDPOINTS_TX_MODE_STRING, "%s", PARTIAL_TX_PREALLOCATED_STRING);		break;		
+	}
+	switch( DROP_TX_MODE )
+	{
+		case FULL_TX:					sprintf(DROP_TX_MODE_STRING, "%s", FULL_TX_STRING);						break;
+		case PARTIAL_TX:				sprintf(DROP_TX_MODE_STRING, "%s", PARTIAL_TX_STRING);						break;
+		case PARTIAL_TX_PREALLOCATED:	sprintf(DROP_TX_MODE_STRING, "%s", PARTIAL_TX_PREALLOCATED_STRING);		break;
+	}
+	switch( ENDPOINTS_ALG )
+	{
+		case BOOL:		sprintf(ENDPOINTS_ALG_STRING, "%s", BOOL_STRING);					break;
+		case NO_BOOL:	sprintf(ENDPOINTS_ALG_STRING, "%s", NO_BOOL_STRING);				break;
+	}
+	switch( MLP_ALGORITHM )
+	{
+		case TABULATED:		sprintf(MLP_ALGORITHM_STRING, "%s", TABULATED_STRING);			break;
+		case STANDARD:		sprintf(MLP_ALGORITHM_STRING, "%s", STANDARD_STRING);			break;
+	}
+
+	int i = 0;
+	char execution_times_path[256];
+	char execution_date[9];
+	current_MMDDYYYY( execution_date);
+	sprintf(execution_times_path, "%s//%s.csv", GLOBAL_RESULTS_PATH, EXECUTION_TIMES_FILENAME);
+	//sprintf(execution_times_path, "%s%s//%s.csv", OUTPUT_DIRECTORY, OUTPUT_FOLDER, EXECUTION_TIMES_FILENAME);
+	puts(execution_times_path);
+	FILE* execution_times_file = fopen( execution_times_path, "a+" );
+	fprintf(execution_times_file, "%s, ",				execution_date						);	// 1
+	fprintf(execution_times_file, "%s, ",				TESTED_BY_STRING						);	// 2
+	fprintf(execution_times_file, "%s, ",				INPUT_DIRECTORY						);	// 3
+	fprintf(execution_times_file, "%s, ",				INPUT_FOLDER						);	// 4
+	fprintf(execution_times_file, "%s, ",				OUTPUT_DIRECTORY					);	// 5
+	fprintf(execution_times_file, "%s, ",				OUTPUT_FOLDER						);	// 6
+	fprintf(execution_times_file, "%6.6lf, ",			execution_time_data_reads			);	// 7
+	fprintf(execution_times_file, "%6.6lf, ",			execution_time_preprocessing		);	// 8
+	fprintf(execution_times_file, "%6.6lf, ",			execution_time_endpoints			);	// 9
+	fprintf(execution_times_file, "%6.6lf, ",			execution_time_tables				);	// 10
+	fprintf(execution_times_file, "%6.6lf, ",			execution_time_init_image			);	// 11
+	fprintf(execution_times_file, "%6.6lf, ",			execution_time_DROP					);	// 12
+	for( i = 0; i < execution_times_DROP_iterations.size(); i++ )
+		fprintf(execution_times_file, " %6.6lf, ", execution_times_DROP_iterations[i]	);	// 13-24
+	for( ; i < MAX_ITERATIONS; i++ )
+		fprintf(execution_times_file, ", ");													
+	fprintf(execution_times_file, "%6.6lf, ",			execution_time_reconstruction		);	// 25
+	fprintf(execution_times_file, "%6.6lf, ",			execution_time_program				);	// 26
+
+	fprintf(execution_times_file, "%d, ",				THREADS_PER_BLOCK					);	// 27
+	fprintf(execution_times_file, "%s, ",				ENDPOINTS_TX_MODE_STRING			);	// 28
+	fprintf(execution_times_file, "%s, ",				ENDPOINTS_ALG_STRING				);	// 29
+	fprintf(execution_times_file, "%d, ",				MAX_ENDPOINTS_HISTORIES				);	// 30
+	fprintf(execution_times_file, "%d, ",				ENDPOINTS_PER_BLOCK					);	// 31
+	fprintf(execution_times_file, "%d, ",				ENDPOINTS_PER_THREAD				);	// 32
+	fprintf(execution_times_file, "%s, ",				DROP_TX_MODE_STRING					);	// 33
+	fprintf(execution_times_file, "%s, ",				MLP_ALGORITHM_STRING				);	// 34
+	fprintf(execution_times_file, "%d, ",				HISTORIES_PER_BLOCK					);	// 35
+	fprintf(execution_times_file, "%d, ",				HISTORIES_PER_THREAD				);	// 36
+	fprintf(execution_times_file, "%d, ",				VOXELS_PER_THREAD					);	// 37
+	fprintf(execution_times_file, "%6.6lf, ",			LAMBDA								);	// 38
+	fprintf(execution_times_file, "%d, ",				DROP_BLOCK_SIZE						);	// 39
+	fprintf(execution_times_file, "%6.6lf, ",			TRIG_TABLE_MIN						);	// 40
+	fprintf(execution_times_file, "%6.6lf, ",			TRIG_TABLE_MAX						);	// 41
+	fprintf(execution_times_file, "%6.6lf, ",			TRIG_TABLE_STEP						);	// 42
+	fprintf(execution_times_file, "%6.6lf, ",			DEPTH_TABLE_RANGE					);	// 43
+	fprintf(execution_times_file, "%6.6lf, ",			DEPTH_TABLE_STEP					);	// 44
+	fprintf(execution_times_file, "%6.6lf, ",			POLY_TABLE_RANGE					);	// 45
+	fprintf(execution_times_file, "%6.6lf, ",			POLY_TABLE_STEP						);	// 46
+	fprintf(execution_times_file, "\n",					POLY_TABLE_STEP						);	// end line, go to beginning of next entry
+
+	fclose(execution_times_file);
+	//Execution Date	Executed By	INPUT_DIRECTORY	INPUT_FOLDER	OUTPUT_DIRECTORY	OUTPUT_FOLDER	preprocessing	endpoints	tables	init_image	DROP_total	iteration 1	iteration 2	iteration 3	iteration 4	iteration 5	iteration 6	iteration 7	iteration 8	iteration 9	iteration 10	iteration 11	iteration 12	reconstruction	program	THREADS_PER_BLOCK	ENDPOINTS_TX_MODE	ENDPOINTS_ALG	MAX_ENDPOINTS_HISTORIES	ENDPOINTS_PER_BLOCK	ENDPOINTS_PER_THREAD	DROP_TX_MODE	MLP_ALGORITHM	HISTORIES_PER_BLOCK	HISTORIES_PER_THREAD	VOXELS_PER_THREAD	LAMBDA	DROP_BLOCK_SIZE	TRIG_TABLE_MIN	TRIG_TABLE_MAX	TRIG_TABLE_STEP	DEPTH_TABLE_RANGE	DEPTH_TABLE_STEP	POLY_TABLE_RANGE	POLY_TABLE_STEP
+}
+void init_execution_times_csv()
 {
 	char execution_times_path[256];
-	sprintf(execution_times_path, "%s%s//%s", OUTPUT_DIRECTORY, OUTPUT_FOLDER, execution_times_filename);
-	//sprintf(execution_times_path, "%s", execution_times_filename);
-	FILE* execution_times_file = fopen( execution_times_path, "w");
-	fprintf(execution_times_file, "execution_time_preprocessing = %6.6lf\n", execution_time_preprocessing );
-	fprintf(execution_times_file, "execution_time_endpoints = %6.6lf\n", execution_time_endpoints );
-	fprintf(execution_times_file, "execution_time_tables = %6.6lf\n", execution_time_tables );
-	fprintf(execution_times_file, "execution_time_init_image = %6.6lf\n", execution_time_init_image );
-	fprintf(execution_times_file, "execution_time_DROP = %6.6lf\n", execution_time_DROP );
-	for( int i = 0; i < execution_times_DROP_iterations.size(); i++ )
-		fprintf(execution_times_file, "execution_time_DROP_iteration %d = %6.6lf\n", i, execution_times_DROP_iterations[i] );
-	fprintf(execution_times_file, "execution_time_reconstruction = %6.6lf\n", execution_time_reconstruction );
-	fprintf(execution_times_file, "execution_time_program = %6.6lf\n", execution_time_program );
+	char execution_date[9];
+	current_MMDDYYYY( execution_date);
+	//fprintf( Execution Date	Executed By	INPUT_DIRECTORY	INPUT_FOLDER	OUTPUT_DIRECTORY	OUTPUT_FOLDER	THREADS_PER_BLOCK	ENDPOINTS_TX_MODE	ENDPOINTS_ALG	MAX_ENDPOINTS_HISTORIES	ENDPOINTS_PER_BLOCK	ENDPOINTS_PER_THREAD	DROP_TX_MODE	MLP_ALGORITHM	HISTORIES_PER_BLOCK	HISTORIES_PER_THREAD	VOXELS_PER_THREAD	LAMBDA	DROP_BLOCK_SIZE	TRIG_TABLE_MIN	TRIG_TABLE_MAX	TRIG_TABLE_STEP	DEPTH_TABLE_RANGE	DEPTH_TABLE_STEP	POLY_TABLE_RANGE	POLY_TABLE_STEP
+	//Execution Date		INPUT_DIRECTORY	INPUT_FOLDER	OUTPUT_DIRECTORY	OUTPUT_FOLDER	preprocessing	endpoints	tables	init_image	DROP_total	iteration 1	iteration 2	iteration 3	iteration 4	iteration 5	iteration 6	iteration 7	iteration 8	iteration 9	iteration 10	iteration 11	iteration 12	reconstruction	program	THREADS_PER_BLOCK	ENDPOINTS_TX_MODE	ENDPOINTS_ALG	MAX_ENDPOINTS_HISTORIES	ENDPOINTS_PER_BLOCK	ENDPOINTS_PER_THREAD	DROP_TX_MODE	MLP_ALGORITHM	HISTORIES_PER_BLOCK	HISTORIES_PER_THREAD	VOXELS_PER_THREAD	LAMBDA	DROP_BLOCK_SIZE	TRIG_TABLE_MIN	TRIG_TABLE_MAX	TRIG_TABLE_STEP	DEPTH_TABLE_RANGE	DEPTH_TABLE_STEP	POLY_TABLE_RANGE	POLY_TABLE_STEP
+	//													
+	sprintf(execution_times_path, "%s//%s.csv", GLOBAL_RESULTS_PATH, EXECUTION_TIMES_FILENAME);
+	//sprintf(execution_times_path, "%s%s//%s.csv", OUTPUT_DIRECTORY, OUTPUT_FOLDER, EXECUTION_TIMES_FILENAME);
+	puts(execution_times_path);
+	FILE* execution_times_file = fopen( execution_times_path, "w" );
+	fprintf(execution_times_file, "Execution Date, "			);	// 1
+	fprintf(execution_times_file, "Executed By, "				);	// 2
+	fprintf(execution_times_file, "INPUT_DIRECTORY, "			);	// 3
+	fprintf(execution_times_file, "INPUT_FOLDER, "				);	// 4
+	fprintf(execution_times_file, "OUTPUT_DIRECTORY, "			);	// 5
+	fprintf(execution_times_file, "OUTPUT_FOLDER, "				);	// 6
+	fprintf(execution_times_file, "data reads, "				);	// 7
+	fprintf(execution_times_file, "preprocessing, "				);	// 8
+	fprintf(execution_times_file, "endpoints, "					);	// 9
+	fprintf(execution_times_file, "tables, "					);	// 10
+	fprintf(execution_times_file, "init_image, "				);	// 11
+	fprintf(execution_times_file, "DROP_total, "				);	// 12
+	for( int i = 1; i <= MAX_ITERATIONS; i++ )
+		fprintf(execution_times_file, " iteration %d, ", i		);	// 13-24													
+	fprintf(execution_times_file, "reconstruction, "			);	// 25
+	fprintf(execution_times_file, "program, "					);	// 26
+
+	fprintf(execution_times_file, "THREADS_PER_BLOCK, "			);	// 27
+	fprintf(execution_times_file, "ENDPOINTS_TX_MODE, "			);	// 28
+	fprintf(execution_times_file, "ENDPOINTS_ALG, "				);	// 29
+	fprintf(execution_times_file, "MAX_ENDPOINTS_HISTORIES, "	);	// 30
+	fprintf(execution_times_file, "ENDPOINTS_PER_BLOCK, "		);	// 31
+	fprintf(execution_times_file, "ENDPOINTS_PER_THREAD, "		);	// 32
+	fprintf(execution_times_file, "DROP_TX_MODE, "				);	// 33
+	fprintf(execution_times_file, "MLP_ALGORITHM, "				);	// 34
+	fprintf(execution_times_file, "HISTORIES_PER_BLOCK, "		);	// 35
+	fprintf(execution_times_file, "HISTORIES_PER_THREAD, "		);	// 36
+	fprintf(execution_times_file, "VOXELS_PER_THREAD, "			);	// 37
+	fprintf(execution_times_file, "LAMBDA, "					);	// 38
+	fprintf(execution_times_file, "DROP_BLOCK_SIZE, "			);	// 39
+	fprintf(execution_times_file, "TRIG_TABLE_MIN, "			);	// 40
+	fprintf(execution_times_file, "TRIG_TABLE_MAX, "			);	// 41
+	fprintf(execution_times_file, "TRIG_TABLE_STEP, "			);	// 42
+	fprintf(execution_times_file, "DEPTH_TABLE_RANGE, "			);	// 43
+	fprintf(execution_times_file, "DEPTH_TABLE_STEP, "			);	// 44
+	fprintf(execution_times_file, "POLY_TABLE_RANGE, "			);	// 45
+	fprintf(execution_times_file, "POLY_TABLE_STEP, "			);	// 46
+	fprintf(execution_times_file, "\n"							);	// end line, go to beginning of next entry
+
+	fclose(execution_times_file);
 }
 /***********************************************************************************************************************************************************************************************************************/
 /********************************************************************************* Image Position/Voxel Calculation Functions (Host) ***********************************************************************************/
 /***********************************************************************************************************************************************************************************************************************/
 int calculate_voxel( double zero_coordinate, double current_position, double voxel_size )
 {
-	return abs( current_position - zero_coordinate ) / voxel_size;
+	return static_cast<int>(abs( current_position - zero_coordinate ) / voxel_size);
 }
 int positions_2_voxels(const double x, const double y, const double z, int& voxel_x, int& voxel_y, int& voxel_z )
 {
@@ -10058,27 +10077,176 @@ void bin_2_indexes( int& bin_num, int& t_bin, int& v_bin, int& angular_bin )
 	t_bin = bin_num;
 }
 /***********************************************************************************************************************************************************************************************************************/
+/************************************************************************************* Console Window Print Statement Functions  ***************************************************************************************/
+/***********************************************************************************************************************************************************************************************************************/
+void print_section_separator(char separation_char )
+{
+	char section_separator[CONSOLE_WINDOW_WIDTH];
+	for( int n = 0; n < CONSOLE_WINDOW_WIDTH; n++ )
+		section_separator[n] = separation_char;
+	section_separator[CONSOLE_WINDOW_WIDTH - 1] = '\0';
+	puts(section_separator);
+}
+void construct_header_line( char* statement, char separation_char, char* header )
+{
+	size_t length = strlen(statement), max_line_length = 70;
+	size_t num_dashes = CONSOLE_WINDOW_WIDTH - length - 2;
+	size_t leading_dashes = num_dashes / 2;
+	size_t trailing_dashes = num_dashes - leading_dashes;
+	size_t i = 0, line_length, index = 0;
+
+	line_length = min(static_cast<int>(length - index), static_cast<int>(max_line_length));
+	if( line_length < length - index )
+		while( statement[index + line_length] != ' ' )
+			line_length--;
+	num_dashes = CONSOLE_WINDOW_WIDTH - line_length - 2;
+	leading_dashes = num_dashes / 2;		
+	trailing_dashes = num_dashes - leading_dashes;
+
+	for( ; i < leading_dashes; i++ )
+		header[i] = separation_char;
+	if( statement[index] != ' ' )
+		header[i++] = ' ';
+	else
+		header[i++] = separation_char;
+	for( int j = 0; j < line_length; j++)
+		header[i++] = statement[index++];
+	header[i++] = ' ';
+	for( int j = 0; j < trailing_dashes; j++)
+		header[i++] = separation_char;
+	header[CONSOLE_WINDOW_WIDTH - 1] = '\0';
+}
+void print_section_header( char* statement, char separation_char )
+{
+	print_section_separator(separation_char);
+	char header[CONSOLE_WINDOW_WIDTH];
+	size_t length = strlen(statement), max_line_length = 70;
+	size_t num_dashes = CONSOLE_WINDOW_WIDTH - length - 2;
+	size_t leading_dashes = num_dashes / 2;
+	size_t trailing_dashes = num_dashes - leading_dashes;
+	size_t i, line_length, index = 0;
+
+	while( index < length )
+	{
+		i = 0;
+		line_length = min(static_cast<int>(length - index), static_cast<int>(max_line_length));
+		if( line_length < length - index )
+			while( statement[index + line_length] != ' ' )
+				line_length--;
+		num_dashes = CONSOLE_WINDOW_WIDTH - line_length - 2;
+		leading_dashes = num_dashes / 2;		
+		trailing_dashes = num_dashes - leading_dashes;
+
+		for( ; i < leading_dashes; i++ )
+			header[i] = separation_char;
+		if( statement[index] != ' ' )
+			header[i++] = ' ';
+		else
+			header[i++] = separation_char;
+		for( int j = 0; j < line_length; j++)
+			header[i++] = statement[index++];
+		header[i++] = ' ';
+		for( int j = 0; j < trailing_dashes; j++)
+			header[i++] = separation_char;
+		header[CONSOLE_WINDOW_WIDTH - 1] = '\0';
+		puts(header);		
+	}
+	print_section_separator(separation_char);
+	puts("");
+}
+void print_section_exit( char* statement, char* leading_statement_chars )
+{
+	puts("");
+	//print_section_separator('_');
+	char header[CONSOLE_WINDOW_WIDTH];
+	size_t length = strlen(statement), max_line_length = 70;
+	//int additional_chars = CONSOLE_WINDOW_WIDTH - length - 2;
+	size_t leading_chars = strlen(leading_statement_chars);
+	size_t i = 0, index = 0, line_length;
+
+	while( index < length )
+	{
+		//i = 0;
+		line_length = min(static_cast<int>(length - index), static_cast<int>(max_line_length));
+		if( line_length < length - index )
+			while( statement[index + line_length] != ' ' )
+				line_length--;
+		//additional_chars = CONSOLE_WINDOW_WIDTH - line_length - 2;
+		leading_chars = strlen(leading_statement_chars);
+
+		if( index == 0 )
+		{
+			for( ; i < leading_chars; i++ )
+				header[i] = leading_statement_chars[i];
+		}
+		else
+		{
+			for( ; i < leading_chars; i++ )
+				header[i] = ' '; 
+		}
+		
+		header[i++] = ' ';
+		if( statement[index] == ' ' )
+			index++;
+		for( int j = 0; j < line_length; j++ )
+			header[i++] = statement[index++];
+		for( ; i < CONSOLE_WINDOW_WIDTH; i++ )
+			header[i] = ' ';
+		header[CONSOLE_WINDOW_WIDTH - 1] = '\0';
+		puts(header);		
+		i = 0;
+	}
+	//print_section_separator(separation_char);
+	puts("");
+}
+/***********************************************************************************************************************************************************************************************************************/
 /*********************************************************************************************** Device Helper Functions ***********************************************************************************************/
 /***********************************************************************************************************************************************************************************************************************/
+cudaError_t CUDA_error_check( char* error_statement )
+{
+	cudaError_t cudaStatus = cudaGetLastError();
+	if (cudaStatus != cudaSuccess) 
+		printf("%s %s\n", error_statement, cudaGetErrorString(cudaStatus));						  
 
+	return cudaStatus;
+}
+cudaError_t CUDA_error_check_and_sync_device( char* error_statement, char* sync_statement )
+{
+	cudaError_t cudaStatus = cudaGetLastError();
+	if (cudaStatus != cudaSuccess) 
+		printf("%s %s\n", error_statement, cudaGetErrorString(cudaStatus));						  
+	
+	cudaStatus = cudaDeviceSynchronize();
+	if (cudaStatus != cudaSuccess)
+		fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching %s Kernel!\n", cudaStatus, sync_statement);
+
+	return cudaStatus;
+}
 /***********************************************************************************************************************************************************************************************************************/
 /************************************************************************************ Testing Functions and Functions in Development ***********************************************************************************/
 /***********************************************************************************************************************************************************************************************************************/
 void test_func()
 {
-
+	//init_execution_times_csv();
+	//cout << "Hello world" << endl;
 	for( int i = 0; i < 10; i++ )
 	{
 		double val = 0;
-		timer( START, begin_DROP_iteration, end_DROP_iteration, execution_time_DROP_iteration, "for DROP iteration");
+		//timer( START, begin_DROP_iteration, end_DROP_iteration, execution_time_DROP_iteration, "for DROP iteration");
+		timer( START, begin_DROP_iteration, "for DROP iteration");
 		for( int j = 0; j < 10000000; j++ )
 			val = j * (val + 1);
-		timer( STOP, begin_DROP_iteration, end_DROP_iteration, execution_time_DROP_iteration, "for DROP iteration");
+		//timer( STOP, begin_DROP_iteration, end_DROP_iteration, execution_time_DROP_iteration, "for DROP iteration");
+		execution_time_DROP_iteration = timer( STOP, begin_DROP_iteration, "for DROP iteration");
 		printf("time now = %4.6lf\n", execution_time_DROP_iteration);
 		execution_times_DROP_iterations.push_back(execution_time_DROP_iteration);
 	}
-	for( int i = 0; i < execution_times_DROP_iterations.size(); i++ )
-		printf("time = %4.2f\n", execution_times_DROP_iterations[i] );
+	execution_times_2_csv();
+	execution_times_2_csv();
+	execution_times_2_csv();
+	execution_times_2_csv();
+	//for( int i = 0; i < execution_times_DROP_iterations.size(); i++ )
+	//	printf("time = %4.2f\n", execution_times_DROP_iterations[i] );
 	//char filename[256];
 	//char* name = "FBP_med7";
 	//sprintf( filename, "%s%s/%s%s", OUTPUT_DIRECTORY, OUTPUT_FOLDER, name, ".bin" );
