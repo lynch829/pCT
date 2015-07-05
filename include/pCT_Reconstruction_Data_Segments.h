@@ -11,9 +11,6 @@
 #include "device_launch_parameters.h"
 #include <device_functions.h>
 
-//#include <thrust/host_vector.h>
-//#include <thrust/device_vector.h>
-
 #include <algorithm>    // std::transform
 //#include <array>
 #include <cmath>
@@ -24,7 +21,6 @@
 #include <ctime>		// clock(), time() 
 #include <fstream>
 #include <functional>	// std::multiplies, std::plus, std::function, std::negate
-#include <initializer_list>
 #include <iostream>
 #include <limits>
 #include <map>
@@ -33,9 +29,7 @@
 #include <omp.h>		// OpenMP
 #include <sstream>
 #include <string>
-//#include <tuple>
 #include <typeinfo>		//operator typeid
-//#include <type_traits>	// is_pod
 #include <utility> // for std::move
 #include <vector>
 
@@ -73,7 +67,32 @@ struct generic_input_container
 // 8 UI, 18D, 6 C*
 struct parameters
 {
-	double lambda;
+	char input_directory[50];//   	= "//home//karbasip//";
+	char  output_directory[50];//  	= "//home//karbasip//";
+	char  input_folder[50];//	 	= "input_CTP404_4M";
+	char  output_folder[50];//     	= "cuda_test";
+	int max_gpu_histories;//		= static_cast<int>(3200000);
+	int max_cuts_histories;//		= static_cast<int>(3200000);
+	float lambda;// 		= 	0.001;
+	int iterations;//				= 12;
+	int drop_block_size;//			= static_cast<int>(320000);
+	int threads_per_block;//			= static_cast<int>(320);
+	int endpoints_per_block;//		= static_cast<int>(320);
+	int histories_per_block;// 		= static_cast<int>(320);
+
+	int endpoints_per_thread;// 		= static_cast<int>(1);
+	int histories_per_thread;// 		= static_cast<int>(1);
+	int voxels_per_thread;//			= static_cast<int>(1);
+
+	int max_endpoints_histories;// 		= static_cast<int>(64000000);
+	
+	float msc_lower_threshold;
+	float msc_upper_threshold;
+	float msc_diff_threshold;
+	float hull_filter_radius;
+	
+	TX_OPTIONS endpoints_tx_mode;// = FULL_TX;
+	TX_OPTIONS drop_tx_mode;// = FULL_TX;
 };
 parameters parameter_container;
 parameters *parameters_h = &parameter_container;
@@ -83,8 +102,8 @@ std::map<std::string,unsigned int> switchmap;
 unsigned int num_run_arguments;
 char** run_arguments;
 char* CONFIG_DIRECTORY;
-char* input_directory;
-double lambda;
+//char* input_directory;
+//double lambda;
 int parameter;
 int num_voxel_scales;
 double* voxel_scales;
@@ -136,12 +155,54 @@ const bool MLP_ENDPOINTS_FILE_EXISTS	= true;
 //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------/
 //------------------------------------------------------------------------------ Path to the input/output directories --------------------------------------------------------------------------------/
 //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------/
-const char INPUT_DIRECTORY[]   = "//home//karbasi//Public//";
-const char OUTPUT_DIRECTORY[]  = "//home//karbasi//Public//";
+//// WHartnell
+//const char INPUT_DIRECTORY[]	= "//local//";///home/share/CTP404/input_CTP404_4M
+//const char OUTPUT_DIRECTORY[]	= "//local//";///home/share/CTP404/input_CTP404_4M
+//const char INPUT_FOLDER[]		= "input_CTP404_4M";
+//const char OUTPUT_FOLDER[]      = "Output//CTP404//input_CTP404_4M//Reconstruction";
+//
+//
+//const char INPUT_DIRECTORY[]	= "//local//pCT_data//";///home/share/CTP404/input_CTP404_4M
+//const char OUTPUT_DIRECTORY[]	= "//local//pCT_data//";///home/share/CTP404/input_CTP404_4M
+//const char INPUT_FOLDER[]		= "CTP404//input_CTP404_4M";
+//const char OUTPUT_FOLDER[]      = "Output//CTP404//input_CTP404_4M";
+//
+//local/pCT_data/organized_data/input_CTP404_4M
+//local/pCT_data/organized_data/CTP404/Experimental/150516/0061/Output/150625
+//local/pCT_data/organized_data/EdgePhantom/Experimental/150516/0057/Output/150529
+//local/pCT_data/organized_data/HeadPhantom/Experimental/150516/0059_Sup/Output/150625
+//local/pCT_data/organized_data/HeadPhantom/Experimental/150516/0060_Inf/Output/150625
+//
+//local/pCT_data/organized_data/HeadPhantom/Reconstruction/0059_Sup
+//local/pCT_data/organized_data/HeadPhantom/Reconstruction/0060_Inf
+//// Workstation #2
 //const char INPUT_DIRECTORY[]	= "//home//share//";///home/share/CTP404/input_CTP404_4M
 //const char OUTPUT_DIRECTORY[]	= "//home//share//";///home/share/CTP404/input_CTP404_4M
+//const char INPUT_FOLDER[]		= "CTP404//input_CTP404_4M";
+//const char OUTPUT_FOLDER[]      = "Output//CTP404//input_CTP404_4M";
+// JPertwee
+///local/organized_data/input_CTP404_4M
+///local/organized_data/CTP404/Experimental/150516/0061/Output/150625
+///local/organized_data/HeadPhantom/Experimental/150516/0059_Sup/Output/150625
+///local/organized_data/HeadPhantom/Experimental/150516/0060_Inf/Output/150625
+///local/organized_data/EdgePhantom/Experimental/150516/0057/Output/150529
+const char INPUT_DIRECTORY[]	= "//home//karbasi//Public//";///home/share/CTP404/input_CTP404_4M
+const char OUTPUT_DIRECTORY[]	= "//home//karbasi//Public//";///home/share/CTP404/input_CTP404_4M
+
 const char INPUT_FOLDER[]		= "input_CTP404_4M";
-const char OUTPUT_FOLDER[]      = "B3200L0.0009";
+//const char INPUT_FOLDER[]		= "CTP404//Experimental//150516//0061//Output//150625//";
+//const char INPUT_FOLDER[]		= "HeadPhantom//Experimental//150516//0059_Sup//Output//150625//";
+//const char INPUT_FOLDER[]		= "HeadPhantom//Experimental//150516//0060_Inf//Output//150625//";
+//const char INPUT_FOLDER[]		= "EdgePhantom//Experimental//150516//0057//Output//150529//";
+
+const char OUTPUT_FOLDER[]      = "cuda_test";
+//const char OUTPUT_FOLDER[]      = "CTP404//Reconstruction";
+//const char OUTPUT_FOLDER[]      = "HeadPhantom//Reconstruction//0059_Sup";
+//const char OUTPUT_FOLDER[]      = "HeadPhantom//Reconstruction//0060_Inf";
+//const char OUTPUT_FOLDER[]      = "EdgePhantom//Reconstruction";
+char EXECUTION_DATE[9];
+char OUTPUT_FOLDER_UNIQUE[256];
+const bool OVERWRITING_OK = true;
 const char INPUT_BASE_NAME[]	= "projection";							// waterPhantom, catphan, input_water_Geant500000
 const char FILE_EXTENSION[]		= ".bin";								// Binary file extension
 //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------/
@@ -270,7 +331,7 @@ const unsigned int FBP_MEDIAN_RADIUS = 3;
 #define SC_UPPER_THRESHOLD		0.0										// [cm] If WEPL <= SC_UPPER_THRESHOLD, SC assumes the proton missed the object
 #define MSC_UPPER_THRESHOLD		0.0										// [cm] If WEPL >= MSC_LOWER_THRESHOLD, MSC assumes the proton missed the object
 #define MSC_LOWER_THRESHOLD		-10.0									// [cm] If WEPL <= MSC_UPPER_THRESHOLD, MSC assumes the proton missed the object
-#define MSC_DIFF_THRESH			50										// [#] Threshold on difference in counts between adjacent voxels used by MSC for edge detection
+#define MSC_DIFF_THRESHOLD			50										// [#] Threshold on difference in counts between adjacent voxels used by MSC for edge detection
 #define SM_LOWER_THRESHOLD		6.0										// [cm] If WEPL >= SM_THRESHOLD, SM assumes the proton passed through the object
 #define SM_UPPER_THRESHOLD		21.0									// [cm] If WEPL > SM_UPPER_THRESHOLD, SM ignores this history
 #define SM_SCALE_THRESHOLD		1.0										// [cm] Threshold scaling factor used by SM to adjust edge detection sensitivity
@@ -343,7 +404,7 @@ const unsigned int ITERATE_FILTER_RADIUS = 3;
 const double ITERATE_FILTER_THRESHOLD = 0.1;
 const INITIAL_ITERATE			X_0 = HYBRID;							// Specify which of the HULL_TYPES to use in this run's MLP calculations
 const PROJECTION_ALGORITHMS		PROJECTION_ALGORITHM = DROP;			// Specify which of the projection algorithms to use for image reconstruction
-float LAMBDA = 0.0009;													// Relaxation parameter to use in image iterative projection reconstruction algorithms	
+float LAMBDA = 0.1;													// Relaxation parameter to use in image iterative projection reconstruction algorithms	
 //#define LAMBDA					0.0001								// Relaxation parameter to use in image iterative projection reconstruction algorithms	
 #define ITERATIONS				12										// # of iterations through the entire set of histories to perform in iterative image reconstruction
 double ETA						= 2.5;
@@ -352,7 +413,7 @@ int PSI_SIGN					= 1;
 //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------/
 //------------------------------------------------------------------------- Host/GPU computation and structure information ---------------------------------------------------------------------------/
 //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------/
-#define DROP_BLOCK_SIZE			3200						// # of histories in each DROP block, i.e., # of histories used per image update
+#define DROP_BLOCK_SIZE			3200000						// # of histories in each DROP block, i.e., # of histories used per image update
 
 #define THREADS_PER_BLOCK		1024									// # of threads per GPU block for preprocessing kernels
 #define ENDPOINTS_PER_BLOCK 	320										// # of threads per GPU block for collect_MLP_endpoints_GPU kernel
@@ -364,7 +425,7 @@ int PSI_SIGN					= 1;
 
 #define MAX_GPU_HISTORIES		3200000									// [#] Number of histories to process on the GPU at a time for preprocessing, based on GPU capacity
 #define MAX_CUTS_HISTORIES		3200000									// [#] Number of histories to process on the GPU at a time for statistical cuts, based on GPU capacity
-#define MAX_ENDPOINTS_HISTORIES 10240000								// [#] Number of histories to process on the GPU at a time for MLP endpoints, based on GPU capacity
+#define MAX_ENDPOINTS_HISTORIES 	64000000								// [#] Number of histories to process on the GPU at a time for MLP endpoints, based on GPU capacity
 //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------/
 //----------------------------------------------------------------------------------- Execution timing variables -------------------------------------------------------------------------------------/
 //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------/
@@ -374,7 +435,7 @@ double execution_time_endpoints = 0, execution_time_init_image = 0, execution_ti
 double execution_time_data_reads = 0, execution_time_preprocessing = 0, execution_time_reconstruction = 0, execution_time_program = 0; 
 std::vector<double> execution_times_DROP_iterations;
 
-char GLOBAL_RESULTS_PATH[]				= {"/home//karbasi//dev//pCT//"};
+char GLOBAL_RESULTS_PATH[]				= {"//home//karbasi//Public//"};
 char TESTED_BY_STRING[]					= {"Paniz Karbasi"};
 char EXECUTION_TIMES_FILENAME[]			= {"execution_times"};
 char FULL_TX_STRING[]					= {"FULL_TX"};
@@ -391,7 +452,7 @@ FILE* execution_times_file;
 //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------/
 TX_OPTIONS ENDPOINTS_TX_MODE		= PARTIAL_TX_PREALLOCATED;			// Specifies GPU data tx mode for MLP endpoints as all data (FULL_TX), portions of data (PARTIAL_TX), or portions of data w/ reused GPU arrays (PARTIAL_TX_PREALLOCATED)
 TX_OPTIONS DROP_TX_MODE				= FULL_TX;							// Specifies GPU data tx mode for MLP+DROP as all data (FULL_TX), portions of data (PARTIAL_TX), or portions of data w/ reused GPU arrays (PARTIAL_TX_PREALLOCATED)
-ENDPOINTS_ALGORITHMS ENDPOINTS_ALG	= NO_BOOL;							// Specifies if boolean array is used to store whether a proton hit/missed the hull (BOOL) or uses the 1st MLP voxel (NO_BOOL)
+ENDPOINTS_ALGORITHMS ENDPOINTS_ALG	= BOOL;							// Specifies if boolean array is used to store whether a proton hit/missed the hull (BOOL) or uses the 1st MLP voxel (NO_BOOL)
 MLP_ALGORITHMS MLP_ALGORITHM		= TABULATED;						// Specifies whether calculations are performed explicitly (STANDARD) or if lookup tables are used for MLP calculations (TABULATED)
 //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------/
 //----------------------------------------------------------------------------------- Tabulated data file names --------------------------------------------------------------------------------------/
