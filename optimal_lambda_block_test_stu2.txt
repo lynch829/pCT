@@ -1,7 +1,0 @@
-//home//karbasi//Public//B3200L0.0009	33 secs/iteration
-//home//karbasi//Public//B3200L0.0010
-//home//karbasi//Public//B3200L0.0011
-//home//karbasi//Public//B32000L0.009	19.25 secs/iteration
-//home//karbasi//Public//B32000L0.010
-//home//karbasi//Public//B32000L0.011
-//home//karbasi//Public//B320000L0.045	Error: an illegal memory access was encountered
