@@ -646,6 +646,7 @@ float* FBP_median_filtered_h, * FBP_median_filtered_d;
 double* x_update_h;
 float* x_update_d;
 double* norm_Ai;
+float* norm_Ai_d;
 bool* intersected_hull_h, * intersected_hull_d;
 unsigned int* num_voxel_intersections_h, * num_voxel_intersections_d;
 unsigned int* S_h, * S_d;
