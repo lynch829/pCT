@@ -32,6 +32,7 @@
 #include <typeinfo>		//operator typeid
 #include <utility> // for std::move
 #include <vector>
+#include <getopt.h>
 
 //using namespace std;
 using std::cout;
@@ -54,6 +55,38 @@ enum PROJECTION_ALGORITHMS	{ ART, SART, DROP, BIP, SAP						};	// Define valid c
 enum TX_OPTIONS				{ FULL_TX, PARTIAL_TX, PARTIAL_TX_PREALLOCATED	};	// Define valid choices for the host->GPU data transfer method
 enum ENDPOINTS_ALGORITHMS	{ BOOL, NO_BOOL									};	// Define the method used to identify protons that miss/hit the hull in MLP endpoints calculations
 enum MLP_ALGORITHMS			{ STANDARD, TABULATED							};	// Define whether standard explicit calculations or lookup tables are used in MLP calculations
+enum DROP_ALGORITHMS		{ REGULAR, ROBUST_A, ROBUST_B							};	// Define whether standard DROP or robust version(s)
+
+static struct option long_options[] =
+{
+    {"input_directory", required_argument, NULL, 1},
+    {"output_directory", required_argument, NULL, 2},
+    {"input_folder", required_argument, NULL, 3},
+    {"output_folder", required_argument, NULL, 4},
+    {"max_gpu_histories", required_argument, NULL, 5},
+    {"max_cuts_histories", required_argument, NULL, 6},
+    {"lambda", required_argument, NULL, 7},
+    {"eta", required_argument, NULL, 8},
+    {"psi_sign", required_argument, NULL, 9},
+    {"iterations", required_argument, NULL, 10},
+    {"drop_block_size", required_argument, NULL, 11},
+    {"threads_per_block", required_argument, NULL, 12},
+    {"endpoints_per_block", required_argument, NULL, 13},
+    {"histories_per_block", required_argument, NULL, 14},
+    {"endpoints_per_thread", required_argument, NULL, 15},
+    {"histories_per_thread", required_argument, NULL, 16},
+    {"voxels_per_thread", required_argument, NULL, 17},
+    {"max_endpoints_histories", required_argument, NULL, 18},
+    {"msc_lower_threshold", required_argument, NULL, 19},
+    {"msc_upper_threshold", required_argument, NULL, 20},
+    {"msc_diff_threshold", required_argument, NULL, 21},
+    {"hull_filter_radius", required_argument, NULL, 22},
+    {"endpoints_tx_mode", required_argument, NULL, 23},
+    {"drop_tx_mode", required_argument, NULL, 24},
+    {"drop_alg_mode", required_argument, NULL, 25},
+    {NULL, 0, NULL, 0}
+};
+
 
 struct generic_input_container
 {
@@ -74,6 +107,8 @@ struct parameters
 	int max_gpu_histories;//		= static_cast<int>(3200000);
 	int max_cuts_histories;//		= static_cast<int>(3200000);
 	float lambda;// 		= 	0.001;
+	float eta;
+	int psi_sign;
 	int iterations;//				= 12;
 	int drop_block_size;//			= static_cast<int>(320000);
 	int threads_per_block;//			= static_cast<int>(320);
@@ -93,6 +128,8 @@ struct parameters
 	
 	TX_OPTIONS endpoints_tx_mode;// = FULL_TX;
 	TX_OPTIONS drop_tx_mode;// = FULL_TX;
+	DROP_ALGORITHMS drop_alg_mode;
+	
 };
 parameters parameter_container;
 parameters *parameters_h = &parameter_container;
@@ -146,7 +183,7 @@ const bool AVG_FILTER_HULL				= true;								// Apply averaging filter to hull (
 const bool COUNT_0_WEPLS				= false;							// Count the number of histories with WEPL = 0 (T) or not (F)
 const bool REALLOCATE					= false;
 const bool MLP_FILE_EXISTS				= false;
-const bool MLP_ENDPOINTS_FILE_EXISTS	= true;
+const bool MLP_ENDPOINTS_FILE_EXISTS	= false;
 /*****************************************************************************************************************************************************************************************************/
 /*****************************************************************************************************************************************************************************************************/
 /****************************************************************************** Input/output specifications and options ******************************************************************************/
@@ -407,7 +444,7 @@ const PROJECTION_ALGORITHMS		PROJECTION_ALGORITHM = DROP;			// Specify which of 
 float LAMBDA = 0.1;													// Relaxation parameter to use in image iterative projection reconstruction algorithms	
 //#define LAMBDA					0.0001								// Relaxation parameter to use in image iterative projection reconstruction algorithms	
 #define ITERATIONS				12										// # of iterations through the entire set of histories to perform in iterative image reconstruction
-double ETA						= 2.5;
+float ETA						= 2.5;
 unsigned int METHOD				= 1;
 int PSI_SIGN					= 1;
 //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------/
@@ -454,6 +491,7 @@ TX_OPTIONS ENDPOINTS_TX_MODE		= PARTIAL_TX_PREALLOCATED;			// Specifies GPU data
 TX_OPTIONS DROP_TX_MODE				= FULL_TX;							// Specifies GPU data tx mode for MLP+DROP as all data (FULL_TX), portions of data (PARTIAL_TX), or portions of data w/ reused GPU arrays (PARTIAL_TX_PREALLOCATED)
 ENDPOINTS_ALGORITHMS ENDPOINTS_ALG	= BOOL;							// Specifies if boolean array is used to store whether a proton hit/missed the hull (BOOL) or uses the 1st MLP voxel (NO_BOOL)
 MLP_ALGORITHMS MLP_ALGORITHM		= TABULATED;						// Specifies whether calculations are performed explicitly (STANDARD) or if lookup tables are used for MLP calculations (TABULATED)
+DROP_ALGORITHMS DROP_ALGORITHM		= REGULAR;
 //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------/
 //----------------------------------------------------------------------------------- Tabulated data file names --------------------------------------------------------------------------------------/
 //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------/
