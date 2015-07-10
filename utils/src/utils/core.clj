@@ -2,7 +2,8 @@
   (:require [clojure.string :as str]
             [clojure.tools.cli :refer [parse-opts]]
             [clojure.pprint :refer [pprint]]
-            [clojure.java.io :as io])
+            [clojure.java.io :as io]
+            [clojure.main :refer [repl]])
   (:import [java.io File])
   (:gen-class))
 
@@ -46,13 +47,15 @@
   ([]
    (println
     (->> ["pCT utils. Usage\n"
-          "   :config      update configuration in header files\n"]
+          "   :config      update configuration in header files\n"
+          "   :repl        start a repl\n"
+          "\n"]
          (str/join)))))
 
 (defn exit [status msg]
   (println msg)
-  (System/exit status)
-  )
+  (when-not *debug*
+   (System/exit status)))
 
 (def config-cli-options
   [[nil "--header HEADER_FILE" "header configuration"
@@ -79,12 +82,12 @@
                       {:keys [header pct-options try]}  options]
                   (when *debug*
                     (println)
-                    (pprint "***** Debug Output *****")
-                    (pprint options)
-                    (pprint arguments)
-                    (pprint errors)
-                    (pprint pct-options)
-                    (pprint "^^^^^ Debug Done ^^^^^")
+                    (println "***** Debug Output *****")
+                    (pprint {:options options
+                             :arguments arguments
+                             :errors errors
+                             :pct-options pct-options} )
+                    (println "^^^^^ Debug Done ^^^^^")
                     (println))
                   (cond
                     (:help options) (exit 0 (usage summary))
@@ -95,5 +98,6 @@
                             (if (:try options)
                               (update-config header-path pct-options :out (:file-out options))
                               (update-config header-path pct-options :out header-path)))))
-     (usage))))
+      ":repl" (repl :init #(ns utils.core))
+      (usage))))
 
