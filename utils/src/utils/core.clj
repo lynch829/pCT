@@ -2,14 +2,15 @@
   (:require [clojure.string :as str]
             [clojure.tools.cli :refer [parse-opts]]
             [clojure.pprint :refer [pprint]]
-            [clojure.java.io :as io])
+            [clojure.java.io :as io]
+            [clojure.main :refer [repl]])
   (:import [java.io File])
   (:gen-class))
 
-(def *debug* nil)
+(def ^:dynamic *debug* false)
 
 (defn update-config [in-file parameters & {:keys [debug out show-content]
-                                           :or {debug false
+                                           :or {debug *debug*
                                                 out   nil
                                                 show-content false}}]
   (let [para  (mapv #(str/split % #"=") (str/split parameters #",[\s]*"))
@@ -19,7 +20,10 @@
                              (loop [i (int 0)]
                                (if (< i para_count)
                                  (if (.contains lin ((para i) 0))
-                                   (let [pattern (re-pattern (str/join ["\\s" ((para i) 0) "[\\s]*=[^;]+;"]))]
+                                   (let [regexp-str (str/replace ((para i) 0) "[]" "\\[\\]")
+                                         pattern (re-pattern (str/join ["\\s" regexp-str "[\\s]*=[^;]+;"]))]
+                                     (when debug
+                                       (pprint lin))
                                      (str/replace lin pattern
                                                   (str/join [" " ((para i) 0) " = " ((para i) 1) ";"])))
                                    (recur (unchecked-inc i)))
@@ -43,13 +47,15 @@
   ([]
    (println
     (->> ["pCT utils. Usage\n"
-          "   :config      update configuration in header files\n"]
+          "   :config      update configuration in header files\n"
+          "   :repl        start a repl\n"
+          "\n"]
          (str/join)))))
 
 (defn exit [status msg]
-  (pprint msg)
-  ;; (System/exit status)
-  )
+  (println msg)
+  (when-not *debug*
+   (System/exit status)))
 
 (def config-cli-options
   [[nil "--header HEADER_FILE" "header configuration"
@@ -75,17 +81,23 @@
       ":config" (let [{:keys [options arguments errors summary]} (parse-opts (rest args) config-cli-options)
                       {:keys [header pct-options try]}  options]
                   (when *debug*
-                   (pprint options)
-                   (pprint arguments))
+                    (println)
+                    (println "***** Debug Output *****")
+                    (pprint {:options options
+                             :arguments arguments
+                             :errors errors
+                             :pct-options pct-options} )
+                    (println "^^^^^ Debug Done ^^^^^")
+                    (println))
                   (cond
                     (:help options) (exit 0 (usage summary))
+                    errors (exit 1 (str/join ["Error:\n" (str/join errors)]))
                     (or (empty? pct-options)
                         (nil? header))  (exit 1 (usage summary))
-                    errors (exit 1 (str/join ["Error:\n" (str/join errors)]))
                     :else (let [header-path (.getPath header)]
                             (if (:try options)
                               (update-config header-path pct-options :out (:file-out options))
-                              (update-config header-path pct-options :out header-path)
-                              ))))
-     (usage))))
+                              (update-config header-path pct-options :out header-path)))))
+      ":repl" (repl :init #(ns utils.core))
+      (usage))))
 
